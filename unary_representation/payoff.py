@@ -1,4 +1,4 @@
-from unary_representation.fit_gaussian import fit, S_, Sp_, gauss
+from unary_representation.fit_gaussian import fit, S_, Sp_, _gauss
 import numpy as np
 import qcgpu
 from QuantumState.QuantumState import QCircuit
@@ -97,7 +97,7 @@ def Payoff(qubits, S0, sig, K, gpu):
         psi = C.psi
     CPayoff = 0
     Sp = Sp_(S0, sig, qubits)
-    fp = gauss(Sp, S0, sig)
+    fp = _gauss(Sp, S0, sig)
     for i in range(2**qubits):
         if K<Sp[i]:
             CPayoff += fp[i]*(Sp[i]-K)

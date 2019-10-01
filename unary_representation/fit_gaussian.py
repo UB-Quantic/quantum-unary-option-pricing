@@ -7,7 +7,7 @@ from scipy.optimize import minimize
 import os
 
 #Creation and normalization of an array with gaussian probabilities
-def gauss(x, mu, sigma):
+def _gauss(x, mu, sigma):
     dx = x[1]-x[0]
     g = (1/(np.sqrt(2*pi*sigma**2)))*np.exp(-((x-mu)**2)/(2*sigma**2))
     f = g*dx/(np.sum(g * dx))
@@ -133,7 +133,7 @@ def fit(qu, S0, sig, method='SLSQP', gpu=False):
 
     else:
         S = S_(S0, sig, qu)
-        g = gauss(S, S0, sig)
+        g = _gauss(S, S0, sig)
         para = _parameters(qu)
         solution = minimize(_cost_function, para, args=(qu, g, gpu), method=method, options={'disp': True})
         param = solution.x
@@ -146,7 +146,7 @@ def paint_fit(qu, S0, sig, K, method='SLSQP', gpu=False):
     S = np.linspace(S0 - 3 * sig, S0 + 3 * sig, qu)
     width = 6 * sig / qu / 1.2
     Sp = Sp_(S0, sig, qu)
-    fp = gauss(Sp, S0, sig)
+    fp = _gauss(Sp, S0, sig)
     optimal_parameters = fit(qu, S0, sig, gpu=gpu, method=method)
     r = _result(optimal_parameters, qu, gpu)
     fig, ax = plt.subplots()
