@@ -260,7 +260,7 @@ def unary_benchmark_dev(qu, S0, sig, r, T):
     plt.title('Option price distribution for {} qubits - ibmq_melbourne'.format(qu))
     ax.legend()
     fig.tight_layout()
-    fig.savefig('unary/qubits:{}_S0:{}_sig:{}_r:{}_T{}.png'.format(qu, S0, sig, r, T))
+    fig.savefig('unary/qubits.{}_S0.{}_sig.{}_r.{}_T.{}.png'.format(qu, S0, sig, r, T))
 
 
 def payoff_circuit(qubits, K, S):

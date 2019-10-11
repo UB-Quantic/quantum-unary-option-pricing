@@ -107,8 +107,9 @@ def binary_benchmark_sim(qu, S0, sig, r, T, noise_objects):
     plt.title('Option price distribution for {} qubits - qasm_simulator'.format(qu))
     ax.legend()
     fig.tight_layout()
-    fig.savefig('binary/qubits:{}_S0:{}_sig:{}_r:{}_T:{}_error:{}:.png'.format(qu, S0, sig, r, T, noise_objects[3]))
-
+    text='binary/qubits.{}_S0.{}_sig.{}_r.{}_T.{}_error.{}.png'.format(qu, S0, sig, r, T, noise_objects[3])
+    fig.savefig(text)
+    fig.savefig('binary/try.png')
 
 def comparator(qc, q, K, high, low):
     '''
