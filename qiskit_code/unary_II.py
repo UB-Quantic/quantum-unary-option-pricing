@@ -91,7 +91,7 @@ def measure_probability(qubits):
     Circuit to sample the created probability distribution function
     """
     C = QuantumCircuit(qubits+1, qubits)
-    C.barrier(qubits)
+    #C.barrier(qubits)
     C.measure(range(qubits),range(qubits)) #No measure on the ancilla qubit is necessary
     return C
 
@@ -132,7 +132,7 @@ def extract_probability_dev(qubits, counts, samples):
     return prob
 
 
-def unary_quantum_sim(qu, S0, sig, r, T, noise_objects, all_samples):
+def unary_quantum_sim(qu, S0, sig, r, T, noise_objects):
     backend_sim = Aer.get_backend('qasm_simulator') # Get qasm backend for the simulation of the circuit
     mu = (r - 0.5 * sig ** 2) * T + np.log(S0) # Define all the parameters to be used in the computation
     mean = np.exp(mu + 0.5 * T * sig ** 2) # Set the relevant zone of study and create the mapping between qubit and option price, and
@@ -143,23 +143,21 @@ def unary_quantum_sim(qu, S0, sig, r, T, noise_objects, all_samples):
     lognormal_parameters = rw_parameters(qu, ln) # Solve for the parameters needed to create the target lognormal distribution
     prob_loading = rw_circuit(qu, lognormal_parameters) # Build the probaility loading circuit with the adjusted parameters
     circ_prob = prob_loading + measure_probability(qu) #Circuit to test the precision of the probability loading algorithm
-    shots = 2**qu
+    shots = 10000
     noise_model, coupling_map, basis_gates, error = noise_objects
     job_sim = execute(circ_prob, backend_sim, shots=shots, basis_gates=basis_gates, noise_model=noise_model,coupling_map=coupling_map, optimization_level=3)
     result_sim = job_sim.result()  # Run the test circuit through the simulator and sample the results in order to get the estimated probabilities
     counts_sim = result_sim.get_counts(circ_prob)
 
-    if all_samples:
-        prob_sim = extract_probability_all_samples(qu, counts_sim, shots)
-    else:
-        prob_sim = extract_probability(qu, counts_sim, shots)
+    prob_sim = extract_probability_all_samples(qu, counts_sim, shots)
+
     print(sum(prob_sim))
 
     return (S, ln, prob_sim), (mu, mean, variance)
 
 
 def unary_benchmark_sim(qu, S0, sig, r, T, noise_objects, err):
-    (S, ln, prob_sim), (mu, mean, variance) = unary_quantum_sim(qu, S0, sig, r, T, noise_objects, all_samples)
+    (S, ln, prob_sim), (mu, mean, variance) = unary_quantum_sim(qu, S0, sig, r, T, noise_objects)
 
 
     '''
@@ -191,7 +189,7 @@ def unary_benchmark_sim(qu, S0, sig, r, T, noise_objects, err):
     width = (S[1] - S[0]) / 1.2
     
     fig, ax = plt.subplots()
-    ax.bar(S, prob_sim, width, label='Quantum', alpha=0.8)
+    ax.bar(S, un_samples, width, label='Quantum', alpha=0.8)
     ax.scatter(S, ln, s=500, color='C1', label='Exact', marker='_')
     ax.plot(Sp, lnp* (S[1]- S[0]) / (Sp[1] - Sp[0]), 'C1')
     plt.ylabel('Probability')
@@ -216,24 +214,64 @@ def payoff_circuit(qubits, K, S):
     C.barrier(range(qubits+1))
     for i in range(qK, qubits):                              #Control-RY rotations controled by states
         angle = 2 * np.arcsin(np.sqrt((S[i]-K)/(S[qubits-1]-K))) #with higher value than the strike
-        C.cu3(((-1)**i)*angle, 0, 0, i, qubits)                        #targeting the ancilla qubit
+        C.cu3(angle, 0, 0, i, qubits)                        #targeting the ancilla qubit
     return C
-
-
+'''
 def measure_payoff(qubits):
-    '''
-    Circuit that measures the ancilla qubit to sample the expected payoff of the option
-    '''
     C = QuantumCircuit(qubits+1, 1)
-    C.barrier(range(qubits+1))
+    #C.barrier(range(qubits+1))
     C.measure(qubits, 0)
     return C
-
+'''
+def measure_payoff(qubits):
+    
+    C = QuantumCircuit(qubits+1, qubits+1)
+    #C.barrier(range(qubits+1))
+    C.measure(range(qubits+1), range(qubits+1))
+    return C
 
 def payoff_quantum_sim(qu, S0, sig, r, T, K, noise_objects):
     backend_sim = Aer.get_backend('qasm_simulator')  # Get qasm backend for the simulation of the circuit
     mu = (r - 0.5 * sig ** 2) * T + np.log(S0)  # Define all the parameters to be used in the computation
-    samples = 2 ** qu
+    samples = 10000
+    mean = np.exp(mu + 0.5 * T * sig ** 2)  # Set the relevant zone of study and create the mapping between qubit and option price, and
+                                # generate the target lognormal distribution within the interval
+    variance = (np.exp(T * sig ** 2) - 1) * np.exp(2 * mu + T * sig ** 2)
+    S = np.linspace(max(mean - 3 * np.sqrt(variance), 0), mean + 3 * np.sqrt(variance), qu)
+    ln = log_normal(S, mu, sig, T)
+    lognormal_parameters = rw_parameters(qu, ln)  # Solve for the parameters needed to create the target lognormal distribution
+    prob_loading = rw_circuit(qu, lognormal_parameters)  # Build the probaility loading circuit with the adjusted parameters
+    circ_payoff = prob_loading + payoff_circuit(qu, K, S) + measure_payoff(qu)
+    noise_model, coupling_map, basis_gates, error = noise_objects
+    job_payoff_sim = execute(circ_payoff, backend_sim, shots=samples, basis_gates=basis_gates, noise_model=noise_model,
+                      coupling_map=coupling_map, optimization_level=3) #Run the complete payoff expectation circuit through a simulator
+                                                                        #and sample the ancilla qubit
+    result_payoff_sim = job_payoff_sim.result()
+    counts_payoff_sim = result_payoff_sim.get_counts(circ_payoff)
+    ones=0
+    zeroes=0
+    keys = counts_payoff_sim.keys()
+    #print(keys)
+    for key in keys:
+        unary = 0
+        for i in range(1,qu+1):
+            unary+=int(key[i])
+        #print(unary)
+        if unary==1:
+            #print(int(key[qu]))
+            if int(key[0])==0:
+                zeroes+=counts_payoff_sim.get(key)
+            else:
+                ones+=counts_payoff_sim.get(key)
+            
+    qu_payoff_sim = ones * (S[qu - 1]-K) / (ones+zeroes)
+
+    return qu_payoff_sim
+'''
+def payoff_quantum_sim(qu, S0, sig, r, T, K, noise_objects):
+    backend_sim = Aer.get_backend('qasm_simulator')  # Get qasm backend for the simulation of the circuit
+    mu = (r - 0.5 * sig ** 2) * T + np.log(S0)  # Define all the parameters to be used in the computation
+    samples = 10000
     mean = np.exp(mu + 0.5 * T * sig ** 2)  # Set the relevant zone of study and create the mapping between qubit and option price, and
                                 # generate the target lognormal distribution within the interval
     variance = (np.exp(T * sig ** 2) - 1) * np.exp(2 * mu + T * sig ** 2)
@@ -251,16 +289,15 @@ def payoff_quantum_sim(qu, S0, sig, r, T, K, noise_objects):
     qu_payoff_sim = counts_payoff_sim.get('1') * (S[qu - 1]-K) / samples
 
     return qu_payoff_sim
-
+'''
 
 def classical_payoff(qu, S0, sig, r, T, K):
     mu = (r - 0.5 * sig ** 2) * T + np.log(S0)  # Define all the parameters to be used in the computation
-    samples = 2 ** qu
-    mean = np.exp(
-        mu + 0.5 * T * sig ** 2)  # Set the relevant zone of study and create the mapping between qubit and option price, and
+    samples = 10000
+    mean = np.exp(mu + 0.5 * T * sig ** 2)  # Set the relevant zone of study and create the mapping between qubit and option price, and
     # generate the target lognormal distribution within the interval
     variance = (np.exp(T * sig ** 2) - 1) * np.exp(2 * mu + T * sig ** 2)
-    Sp = np.linspace(max(mean - 3 * np.sqrt(variance), 0), mean + 3 * np.sqrt(variance), qu)
+    Sp = np.linspace(max(mean - 3 * np.sqrt(variance), 0), mean + 3 * np.sqrt(variance), samples)
     lnp = log_normal(Sp, mu, sig, T)
     cl_payoff = 0
     for i in range(len(Sp)):
@@ -272,13 +309,14 @@ def classical_payoff(qu, S0, sig, r, T, K):
 
 def unary_qu_cl(qu, S0, sig, r, T, K, noise_objects, err):
     samples=2**qu
+    shots=10000
     qu_payoff_sim = payoff_quantum_sim(qu, S0, sig, r, T, K, noise_objects)
     cl_payoff = classical_payoff(qu, S0, sig, r, T, K)
     error = np.abs(100 * (cl_payoff - qu_payoff_sim) * 2 / (cl_payoff + qu_payoff_sim))
     print('With precision {}'.format(samples))
     print('Classical Payoff: {}'.format(cl_payoff))
     print('')
-    print('With {} qubits and {} samples with {} error: {}'.format(qu, samples, err, (0.001*noise_objects[3])))
+    print('With {} qubits and {} samples with {} error: {}'.format(qu, shots, err, (0.001*noise_objects[3])))
     print('Quantum Payoff: {}'.format(qu_payoff_sim))
     print('')
     print('Percentage off: {}%'.format(error))

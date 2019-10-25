@@ -1,6 +1,6 @@
-from binary import binary_benchmark_sim, binary_qu_cl
+from binary_II import binary_benchmark_sim, binary_qu_cl
 from noise_mapping_II import noise_model_unary_measure, noise_model_unary_phaseflip, noise_model_unary_bitflip, unary_coupling, binary_coupling, noise_model_binary_measure, noise_model_binary_phaseflip, noise_model_binary_bitflip
-from unary import unary_benchmark_sim, unary_qu_cl
+from unary_II import unary_benchmark_sim, unary_qu_cl
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -30,11 +30,13 @@ binary_phaseflip_payoff = []
 binary_measurement_payoff = []
 percentage_error = []
 
-for error in range(0,50,50):
+for error in range(1):
+
       #------------------------------------------------------
       #--------------------Unary-----------------------------
       #------------------------------------------------------
-      qu = 16
+      error=error/5.0
+      qu = 13
       err = 'bitflip'
       noise_model=noise_model_unary_bitflip(qu, error)
       basis_gates=noise_model.basis_gates
@@ -43,10 +45,12 @@ for error in range(0,50,50):
       print('Unary noise Done')
       unary_benchmark_sim(qu, S0, sig, r, T, noise_objects, err)
       print('Unary benchmark Done')
-      qu_payoff, cl_payoff, diff = unary_qu_cl(qu, S0, sig, r, T, K, noise_objects)
+      qu_payoff, cl_payoff, diff = unary_qu_cl(qu, S0, sig, r, T, K, noise_objects, err)
+      print(qu_payoff, cl_payoff, diff)
       print('Unary payoff Done')
       percentage_error.append(error*0.001)
       unary_bitflip_payoff.append(qu_payoff)
+
       #------------------------------------------------------
       err = 'phaseflip'
       noise_model=noise_model_unary_phaseflip(qu, error)
@@ -56,7 +60,7 @@ for error in range(0,50,50):
       print('Unary noise Done')
       unary_benchmark_sim(qu, S0, sig, r, T, noise_objects, err)
       print('Unary benchmark Done')
-      qu_payoff, cl_payoff, diff = unary_qu_cl(qu, S0, sig, r, T, K, noise_objects)
+      qu_payoff, cl_payoff, diff = unary_qu_cl(qu, S0, sig, r, T, K, noise_objects, err)
       print('Unary payoff Done')
       unary_phaseflip_payoff.append(qu_payoff)
       #------------------------------------------------------
@@ -68,43 +72,48 @@ for error in range(0,50,50):
       print('Unary noise Done')
       unary_benchmark_sim(qu, S0, sig, r, T, noise_objects, err)
       print('Unary benchmark Done')
-      qu_payoff, cl_payoff, diff = unary_qu_cl(qu, S0, sig, r, T, K, noise_objects)
+      qu_payoff, cl_payoff, diff = unary_qu_cl(qu, S0, sig, r, T, K, noise_objects, err)
       print('Unary payoff Done')
       unary_measurement_payoff.append(qu_payoff)
+
       #------------------------------------------------------
       #--------------------Binary----------------------------
       #------------------------------------------------------
       qu=4
+      err = 'bitflip'
       noise_model=noise_model_binary_bitflip(qu, error)
       basis_gates=noise_model.basis_gates
       coupling_map = binary_coupling(qu)
       noise_objects = noise_model, coupling_map, basis_gates, error
       print('Binary noise Done')
-      binary_benchmark_sim(qu, S0, sig, r, T, noise_objects)
+      binary_benchmark_sim(qu, S0, sig, r, T, noise_objects, err)
       print('Binary benchmark Done')
-      qu_payoff, cl_payoff, diff = binary_qu_cl(qu, S0, sig, r, T, K, noise_objects)
+      qu_payoff, cl_payoff, diff = binary_qu_cl(qu, S0, sig, r, T, K, noise_objects, err)
+      print(qu_payoff, cl_payoff, diff)
       print('Binary payoff Done')
       binary_bitflip_payoff.append(qu_payoff)
       #------------------------------------------------------
+      err = 'phaseflip'
       noise_model=noise_model_binary_phaseflip(qu, error)
       basis_gates=noise_model.basis_gates
       coupling_map = binary_coupling(qu)
       noise_objects = noise_model, coupling_map, basis_gates, error
       print('Binary noise Done')
-      binary_benchmark_sim(qu, S0, sig, r, T, noise_objects)
+      binary_benchmark_sim(qu, S0, sig, r, T, noise_objects, err)
       print('Binary benchmark Done')
-      qu_payoff, cl_payoff, diff = binary_qu_cl(qu, S0, sig, r, T, K, noise_objects)
+      qu_payoff, cl_payoff, diff = binary_qu_cl(qu, S0, sig, r, T, K, noise_objects, err)
       print('Binary payoff Done')
       binary_phaseflip_payoff.append(qu_payoff)
       #------------------------------------------------------
+      err = 'measurement'
       noise_model=noise_model_binary_measure(qu, error)
       basis_gates=noise_model.basis_gates
       coupling_map = binary_coupling(qu)
       noise_objects = noise_model, coupling_map, basis_gates, error
       print('Binary noise Done')
-      binary_benchmark_sim(qu, S0, sig, r, T, noise_objects)
+      binary_benchmark_sim(qu, S0, sig, r, T, noise_objects, err)
       print('Binary benchmark Done')
-      qu_payoff, cl_payoff, diff = binary_qu_cl(qu, S0, sig, r, T, K, noise_objects)
+      qu_payoff, cl_payoff, diff = binary_qu_cl(qu, S0, sig, r, T, K, noise_objects, err)
       print('Binary payoff Done')
       binary_measurement_payoff.append(qu_payoff)
       
@@ -174,10 +183,3 @@ ax.legend()
 fig.tight_layout()
 fig.savefig('unary/K:{}_S0:{}_sig:{}_r:{}_T:{}_measurement_percentage.png'.format(K, S0, sig, r, T))
 #------------------------------------------------------
-
-
-
-
-
-
-

@@ -39,13 +39,20 @@ def ccry(QC, ctrls, targ, theta):
     QC.cu3( theta / 2, 0, 0, ctrls[0], targ)
 
 
-def classical_payoff(values, pdf, K):
-    payoff = 0
-    for x, p in zip(values, pdf):
-        if x > K:
-            payoff += (x - K) * p
+def classical_payoff(qu, S0, sig, r, T, K):
+    mu = (r - 0.5 * sig ** 2) * T + np.log(S0)  # Define all the parameters to be used in the computation
+    samples = 10000
+    mean = np.exp(mu + 0.5 * T * sig ** 2)  # Set the relevant zone of study and create the mapping between qubit and option price, and
+    # generate the target lognormal distribution within the interval
+    variance = (np.exp(T * sig ** 2) - 1) * np.exp(2 * mu + T * sig ** 2)
+    Sp = np.linspace(max(mean - 3 * np.sqrt(variance), 0), mean + 3 * np.sqrt(variance), samples)
+    lnp = log_normal(Sp, mu, sig, T)
+    cl_payoff = 0
+    for i in range(len(Sp)):
+        if K < Sp[i]:
+            cl_payoff += lnp[i] * (Sp[i] - K)
 
-    return payoff
+    return cl_payoff
 
 def binary_quantum_sim(qu, S0, sig, r, T, noise_objects):
     samples = 2 ** qu
@@ -152,7 +159,7 @@ def payoff_circuit(qc, q, K, high, low):
     k = comparator(qc, q, K, high, low)
     c = rotations(qc, q, k)
 
-    qc.measure([9], [0])
+    qc.measure([2*q+1], [0])
 
     return k, c#We need to keep track of these variables
 
@@ -200,15 +207,16 @@ def payoff_quantum_sim(qu, S0, sig, r, T, K, noise_objects, printer=True):
     return qu_payoff
 
 
-def binary_qu_cl(qu, S0, sig, r, T, K, noise_objects):
+def binary_qu_cl(qu, S0, sig, r, T, K, noise_objects, err):
     samples=2**qu
+    shots=10000
     qu_payoff_sim = payoff_quantum_sim(qu, S0, sig, r, T, K, noise_objects)
     cl_payoff = classical_payoff(qu, S0, sig, r, T, K)
     error = np.abs(100 * (cl_payoff - qu_payoff_sim) * 2 / (cl_payoff + qu_payoff_sim))
     print('With precision {}'.format(samples))
     print('Classical Payoff: {}'.format(cl_payoff))
     print('')
-    print('With {} qubits and {} samples with {} error: {}'.format(qu, samples, err, (0.001*noise_objects[3])))
+    print('With {} qubits and {} samples with {} error: {}'.format(qu, shots, err, (0.001*noise_objects[3])))
     print('Quantum Payoff: {}'.format(qu_payoff_sim))
     print('')
     print('Percentage off: {}%'.format(error))

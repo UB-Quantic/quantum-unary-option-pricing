@@ -17,7 +17,6 @@ def unary_coupling(qubits):
 def binary_coupling(qubits):
     entangling1 = list(itertools.combinations(list(range(3,-1, -1)), r=2))
     entangling1 = [list(e) for e in entangling1]
-    print(type(entangling1[0][0]))
     entangling2 = []
     for i in range(qubits - 1):
         entangling2 += [[i + 1, qubits + i], [i + 1, qubits + i + 1], [qubits + i, qubits + i + 1]]
