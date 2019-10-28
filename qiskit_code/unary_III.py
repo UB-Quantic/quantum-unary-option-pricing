@@ -233,7 +233,7 @@ def payoff_quantum_sim(qu, S0, sig, r, T, K, noise_objects):
                 ones+=counts_payoff_sim.get(key)
             
     qu_payoff_sim = ones * (S[qu - 1]-K) / (ones+zeroes)
-    print(ones+zeroes)
+    #print(ones+zeroes)
 
     return qu_payoff_sim
 

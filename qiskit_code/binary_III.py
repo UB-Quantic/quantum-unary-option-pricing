@@ -191,6 +191,7 @@ def payoff_quantum_sim(qu, S0, sig, r, T, K, noise_objects, printer=True):
 
 
 def binary_qu_cl(qu, S0, sig, r, T, K, noise_objects, cl_payoff):
+    
     qu_payoff_sim = payoff_quantum_sim(qu, S0, sig, r, T, K, noise_objects)
     error = np.abs(100 * (cl_payoff - qu_payoff_sim) / cl_payoff)
 
