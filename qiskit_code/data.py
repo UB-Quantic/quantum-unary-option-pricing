@@ -14,6 +14,9 @@ sig = 0.4
 r = 0.05
 T = 0.1
 
+unary_qubits = 8
+binary_qubits = 3
+
 bitflip_error = []
 phaseflip_error = []
 measurement_error = []
@@ -39,7 +42,7 @@ for error in range(100):
       
       for i in range(100):
             #------------------------------------------------------
-            qu = 8
+            qu = unary_qubits
             noise_model=noise_model_bitflip(qu, error)
             basis_gates=noise_model.basis_gates
             noise_objects = noise_model, basis_gates, error
@@ -65,7 +68,7 @@ for error in range(100):
             unary_noise.append(diff)
       
             #------------------------------------------------------
-            qu = 3
+            qu = binary_qubits
             noise_model=noise_model_bitflip(qu, error)
             basis_gates=noise_model.basis_gates
             noise_objects = noise_model, basis_gates, error
@@ -87,24 +90,24 @@ for error in range(100):
             noise_model=noise_model_total(qu, error)
             basis_gates=noise_model.basis_gates
             noise_objects = noise_model, basis_gates, error
-            qu_payoff, diff = unary_qu_cl(qu, S0, sig, r, T, K, noise_objects, cl_payoff)
+            qu_payoff, diff = binary_qu_cl(qu, S0, sig, r, T, K, noise_objects, cl_payoff)
             binary_noise.append(diff)
             
-      with open("results/unary_rep_bitflip_{}_error.txt".format(error), "w") as file:
+      with open("results/{}_unary_rep_bitflip_{}_error.txt".format(unary_qubits, error), "w") as file:
             file.write(str(unary_bitflip))
-      with open("results/unary_rep_phaseflip_{}_error.txt".format(error), "w") as file:
+      with open("results/{}_unary_rep_phaseflip_{}_error.txt".format(unary_qubits, error), "w") as file:
             file.write(str(unary_phaseflip))
-      with open("results/unary_rep_measurement_{}_error.txt".format(error), "w") as file:
+      with open("results/{}_unary_rep_measurement_{}_error.txt".format(unary_qubits, error), "w") as file:
             file.write(str(unary_measurement))
-      with open("results/unary_rep_noise_{}_error.txt".format(error), "w") as file:
+      with open("results/{}_unary_rep_noise_{}_error.txt".format(unary_qubits, error), "w") as file:
             file.write(str(unary_noise))
             
-      with open("results/binary_rep_bitflip_{}_error.txt".format(error), "w") as file:
+      with open("results/{}_binary_rep_bitflip_{}_error.txt".format(binary_qubits, error), "w") as file:
             file.write(str(binary_bitflip))
-      with open("results/binary_rep_phaseflip_{}_error.txt".format(error), "w") as file:
+      with open("results/{}_binary_rep_phaseflip_{}_error.txt".format(binary_qubits, error), "w") as file:
             file.write(str(binary_phaseflip))
-      with open("results/binary_rep_measurement_{}_error.txt".format(error), "w") as file:
+      with open("results/{}_binary_rep_measurement_{}_error.txt".format(binary_qubits, error), "w") as file:
             file.write(str(binary_measurement))
-      with open("results/binary_rep_noise_{}_error.txt".format(error), "w") as file:
+      with open("results/{}_binary_rep_noise_{}_error.txt".format(binary_qubits, error), "w") as file:
             file.write(str(binary_noise))
             

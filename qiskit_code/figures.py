@@ -69,31 +69,31 @@ for error in range(100):
       phaseflip_error.append(100*error*0.00005)
       measurement_error.append(100*error*0.0005)
       noise_error.append(100*error*0.00005)
-      with open("results/unary_rep_bitflip_{}_error.txt".format(error), "r") as file:
+      with open("results/{}_unary_rep_bitflip_{}_error.txt".format(unary_qubits, error), "r") as file:
             for line in file:
-                  unary_bitflip = eval(line)
-      with open("results/unary_rep_phaseflip_{}_error.txt".format(error), "r") as file:
+                  unary_bitflip += eval(line)
+      with open("results/{}_unary_rep_phaseflip_{}_error.txt".format(unary_qubits, error), "r") as file:
             for line in file:
-                  unary_phaseflip = eval(line)
-      with open("results/unary_rep_measurement_{}_error.txt".format(error), "r") as file:
+                  unary_phaseflip += eval(line)
+      with open("results/{}_unary_rep_measurement_{}_error.txt".format(unary_qubits, error), "r") as file:
             for line in file:
-                  unary_measurement = eval(line)
-      with open("results/unary_rep_noise_{}_error.txt".format(error), "r") as file:
+                  unary_measurement += eval(line)
+      with open("results/{}_unary_rep_noise_{}_error.txt".format(unary_qubits, error), "r") as file:
             for line in file:
-                  unary_noise = eval(line)
+                  unary_noise += eval(line)
             
-      with open("results/binary_rep_bitflip_{}_error.txt".format(error), "r") as file:
+      with open("results/{}_binary_rep_bitflip_{}_error.txt".format(binary_qubits, error), "r") as file:
             for line in file:
-                  binary_bitflip = eval(line)
-      with open("results/binary_rep_phaseflip_{}_error.txt".format(error), "r") as file:
+                  binary_bitflip += eval(line)
+      with open("results/{}_binary_rep_phaseflip_{}_error.txt".format(binary_qubits, error), "r") as file:
             for line in file:
-                  binary_phaseflip = eval(line)
-      with open("results/binary_rep_measurement_{}_error.txt".format(error), "r") as file:
+                  binary_phaseflip += eval(line)
+      with open("results/{}_binary_rep_measurement_{}_error.txt".format(binary_qubits, error), "r") as file:
             for line in file:
-                  binary_measurement = eval(line)
-      with open("results/binary_rep_noise_{}_error.txt".format(error), "r") as file:
+                  binary_measurement += eval(line)
+      with open("results/{}_binary_rep_noise_{}_error.txt".format(binary_qubits, error), "r") as file:
             for line in file:
-                  binary_noise = eval(line)
+                  binary_noise += eval(line)
             
       unary_bitflip.sort()
       mean = 0
