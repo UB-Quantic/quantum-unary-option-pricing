@@ -23,7 +23,7 @@ class errors:
         self.steps = steps
         self.error_steps = np.linspace(0, max_gate_error, steps)
         self.list_errors = ['bitflip', 'bitflip_m', 'phaseflip', 'phaseflip', 'bitphaseflip', 'bitphaseflip',
-                            'depolarizing', 'depolarizing_m', 'measurement']
+                            'depolarizing', 'depolarizing_m', 'thermal', 'thermal_m', 'measurement']
         try:
             os.makedirs(name_folder_data(self.data))
         except:
@@ -49,13 +49,16 @@ class errors:
             noise = noise_model_depolarizing
             if measure_error:
                 error_name += '_m'
+        elif error_name == 'thermal':
+            noise = noise_model_thermal
+            if measure_error:
+                error_name += '_m'
         elif error_name == 'measurement':
             noise = noise_model_measurement
         else:
             raise NameError('Error not indexed')
 
         for i, error in enumerate(self.error_steps):
-            print('\n')
             print(i)
             noise_model = noise(error, measure=measure_error)
             basis_gates = noise_model.basis_gates
@@ -90,13 +93,16 @@ class errors:
             noise = noise_model_depolarizing
             if measure_error:
                 error_name += '_m'
+        elif error_name == 'thermal':
+            noise = noise_model_thermal
+            if measure_error:
+                error_name += '_m'
         elif error_name == 'measurement':
             noise = noise_model_measurement
         else:
             raise NameError('Error not indexed')
 
         for i, error in enumerate(self.error_steps):
-            print('\n')
             print(i)
             noise_model = noise(error, measure=measure_error)
             basis_gates = noise_model.basis_gates
