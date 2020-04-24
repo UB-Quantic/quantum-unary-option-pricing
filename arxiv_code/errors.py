@@ -30,25 +30,33 @@ class errors:
             pass
 
 
-    def compute_save_errors_binary(self, bins, error_name, repeats, measure_error=False):
+    def compute_save_errors_binary(self, bins, error_name, repeats, measure_error=False, thermal_error=False):
         qubits = int(np.log2(bins))
         results = np.zeros((len(self.error_steps), repeats))
         if error_name == 'bitflip':
             noise = noise_model_bit
             if measure_error:
                 error_name += '_m'
+            if thermal_error:
+                error_name += '_t'
         elif error_name == 'phaseflip':
             noise = noise_model_phase
             if measure_error:
                 error_name += '_m'
+            if thermal_error:
+                error_name += '_t'
         elif error_name == 'bitphaseflip':
             noise = noise_model_bitphase
             if measure_error:
                 error_name += '_m'
+            if thermal_error:
+                error_name += '_t'
         elif error_name == 'depolarizing':
             noise = noise_model_depolarizing
             if measure_error:
                 error_name += '_m'
+            if thermal_error:
+                error_name += '_t'
         elif error_name == 'thermal':
             noise = noise_model_thermal
             if measure_error:
@@ -60,7 +68,7 @@ class errors:
 
         for i, error in enumerate(self.error_steps):
             print(i)
-            noise_model = noise(error, measure=measure_error)
+            noise_model = noise(error, measure=measure_error, thermal=thermal_error)
             basis_gates = noise_model.basis_gates
             c, k, high, low, qc, dev, shots = bin.load_payoff_quantum_sim(qubits, self.S0, self.sig, self.r, self.T, self.K)
             for r in range(repeats):
@@ -74,25 +82,33 @@ class errors:
         np.savetxt(name_folder_data(self.data) + '/%s_bins/binary/'%bins + error_name + '_gate(%s)_steps(%s)_repeats(%s).npz'%(self.max_gate_error, self.steps, repeats), results)
 
 
-    def compute_save_errors_unary(self, bins, error_name, repeats, measure_error=False):
+    def compute_save_errors_unary(self, bins, error_name, repeats, measure_error=False, thermal_error=False):
         qubits = bins
         results = np.zeros((len(self.error_steps), repeats))
         if error_name == 'bitflip':
             noise = noise_model_bit
             if measure_error:
                 error_name += '_m'
+            if thermal_error:
+                error_name += '_t'
         elif error_name == 'phaseflip':
             noise = noise_model_phase
             if measure_error:
                 error_name += '_m'
+            if thermal_error:
+                error_name += '_t'
         elif error_name == 'bitphaseflip':
             noise = noise_model_bitphase
             if measure_error:
                 error_name += '_m'
+            if thermal_error:
+                error_name += '_t'
         elif error_name == 'depolarizing':
             noise = noise_model_depolarizing
             if measure_error:
                 error_name += '_m'
+            if thermal_error:
+                error_name += '_t'
         elif error_name == 'thermal':
             noise = noise_model_thermal
             if measure_error:
@@ -104,7 +120,7 @@ class errors:
 
         for i, error in enumerate(self.error_steps):
             print(i)
-            noise_model = noise(error, measure=measure_error)
+            noise_model = noise(error, measure=measure_error, thermal=thermal_error)
             basis_gates = noise_model.basis_gates
             qc, dev, shots, S = un.load_payoff_quantum_sim(qubits, self.S0, self.sig, self.r, self.T, self.K)
             for r in range(repeats):
@@ -126,15 +142,14 @@ class errors:
                             + error_name + '_gate(%s)_steps(%s)_repeats(%s).npz'%(self.max_gate_error, self.steps, repeats))
         matrix_unary = np.sort(matrix_unary, axis=1)
         mins_unary = matrix_unary[:, int(bounds * (self.steps))]
-        maxs_unary = matrix_unary[:, int((1 - bounds) * (self.steps))]
+        maxs_unary = matrix_unary[:, int(-(bounds) * (self.steps)-1)]
         means_unary = np.mean(matrix_unary, axis=1)
-
         matrix_binary = np.loadtxt(name_folder_data(self.data) + '/%s_bins/binary/' % bins
                                   + error_name + '_gate(%s)_steps(%s)_repeats(%s).npz' % (
                                   self.max_gate_error, self.steps, repeats))
         matrix_binary = np.sort(matrix_binary, axis=1)
         mins_binary = matrix_binary[:, int(bounds * (self.steps))]
-        maxs_binary = matrix_binary[:, int((1 - bounds) * (self.steps))]
+        maxs_binary = matrix_binary[:, int(-(bounds) * (self.steps)-1)]
         means_binary = np.mean(matrix_binary, axis=1)
 
         fig, ax = plt.subplots()

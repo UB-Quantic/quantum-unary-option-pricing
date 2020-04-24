@@ -1,4 +1,9 @@
 from qiskit.providers.aer.noise import NoiseModel, depolarizing_error, pauli_error, thermal_relaxation_error
+from numpy import array
+
+"""
+This file
+"""
 
 def noise_model_measure(error, measure=True):
     noise_model = NoiseModel()#basis_gates=['id', 'u2', 'u3', 'cx'])
@@ -8,7 +13,7 @@ def noise_model_measure(error, measure=True):
 
     return noise_model
 
-def noise_model_phase(error, measure=True):
+def noise_model_phase(error, measure=True, thermal=True):
     noise_model = NoiseModel()#basis_gates=['id', 'u2', 'u3', 'cx'])
     phase_error = error
     cz_error = 2 * error
@@ -20,12 +25,19 @@ def noise_model_phase(error, measure=True):
 
     if measure:
         measure_error = 10 * error
-        measure_error = pauli_error([('X', measure_error), ('I', 1 - measure_error)])
-        noise_model.add_all_qubit_readout_error(measure_error, "measure")
+        measure_error = array([[1 - measure_error, measure_error], [measure_error, 1 - measure_error]])
+        noise_model.add_all_qubit_readout_error(measure_error)
+
+    if thermal:
+        thermal = thermal_relaxation_error(1.5, 1.2, error)
+        cthermal = thermal_relaxation_error(1.5, 1.2, 2 * error)
+        cthermal = cthermal.tensor(cthermal)
+        noise_model.add_all_qubit_quantum_error(cthermal, ['cx'], warnings=False)
+        noise_model.add_all_qubit_quantum_error(thermal, ["u1", "u2", "u3"], warnings=False)
 
     return noise_model
 
-def noise_model_bit(error, measure=True):
+def noise_model_bit(error, measure=True, thermal=True):
     noise_model = NoiseModel()#basis_gates=['id', 'u2', 'u3', 'cx'])
     flip_error = error
     cnot_error = 2 * error
@@ -37,13 +49,20 @@ def noise_model_bit(error, measure=True):
 
     if measure:
         measure_error = 10 * error
-        measure_error = pauli_error([('X', measure_error), ('I', 1 - measure_error)])
-        noise_model.add_all_qubit_readout_error(measure_error, "measure")
+        measure_error = array([[1 - measure_error, measure_error], [measure_error, 1 - measure_error]])
+        noise_model.add_all_qubit_readout_error(measure_error)
+
+    if thermal:
+        thermal = thermal_relaxation_error(1.5, 1.2, error)
+        cthermal = thermal_relaxation_error(1.5, 1.2, 2 * error)
+        cthermal = cthermal.tensor(cthermal)
+        noise_model.add_all_qubit_quantum_error(cthermal, ['cx'], warnings=False)
+        noise_model.add_all_qubit_quantum_error(thermal, ["u1", "u2", "u3"], warnings=False)
 
     return noise_model
 
 
-def noise_model_bitphase(error, measure=False):
+def noise_model_bitphase(error, measure=False, thermal=True):
     noise_model = NoiseModel()  # basis_gates=['id', 'u2', 'u3', 'cx'])
     cnot_error = 2 * error
     bit_flip = pauli_error([('X', error), ('I', 1 - error)])
@@ -58,12 +77,19 @@ def noise_model_bitphase(error, measure=False):
 
     if measure:
         measure_error = 10 * error
-        measure_error = pauli_error([('X', measure_error), ('I', 1 - measure_error)])
-        noise_model.add_all_qubit_readout_error(measure_error, "measure")
+        measure_error = array([[1 - measure_error, measure_error], [measure_error, 1 - measure_error]])
+        noise_model.add_all_qubit_readout_error(measure_error)
+
+    if thermal:
+        thermal = thermal_relaxation_error(1.5, 1.2, error)
+        cthermal = thermal_relaxation_error(1.5, 1.2, 2 * error)
+        cthermal = cthermal.tensor(cthermal)
+        noise_model.add_all_qubit_quantum_error(cthermal, ['cx'], warnings=False)
+        noise_model.add_all_qubit_quantum_error(thermal, ["u1", "u2", "u3"], warnings=False)
 
     return noise_model
 
-def noise_model_depolarizing(error, measure=False):
+def noise_model_depolarizing(error, measure=False, thermal=True):
     noise_model = NoiseModel()  # basis_gates=['id', 'u2', 'u3', 'cx'])
     depolarizing = depolarizing_error(error, 1)
     cdepol_error = depolarizing_error(2 * error, 2)
@@ -72,23 +98,30 @@ def noise_model_depolarizing(error, measure=False):
 
     if measure:
         measure_error = 10 * error
-        measure_error = pauli_error([('X', measure_error), ('I', 1 - measure_error)])
-        noise_model.add_all_qubit_quantum_error(measure_error, "measure")
+        measure_error = array([[1 - measure_error, measure_error], [measure_error, 1 - measure_error]])
+        noise_model.add_all_qubit_readout_error(measure_error)
+
+    if thermal:
+        thermal = thermal_relaxation_error(1.5, 1.2, error)
+        cthermal = thermal_relaxation_error(1.5, 1.2, 2 * error)
+        cthermal = cthermal.tensor(cthermal)
+        noise_model.add_all_qubit_quantum_error(cthermal, ['cx'], warnings=False)
+        noise_model.add_all_qubit_quantum_error(thermal, ["u1", "u2", "u3"], warnings=False)
 
     return noise_model
 
 def noise_model_thermal(error, measure=False):
     noise_model = NoiseModel()  # basis_gates=['id', 'u2', 'u3', 'cx'])
-    thermal = thermal_relaxation_error(0.5, 0.2, error)
-    cthermal = thermal_relaxation_error(0.5, 0.2, 2 * error)
+    thermal = thermal_relaxation_error(1.5, 1.2, error)
+    cthermal = thermal_relaxation_error(1.5, 1.2, 2 * error)
     cthermal = cthermal.tensor(cthermal)
     noise_model.add_all_qubit_quantum_error(cthermal, ['cx'], warnings=False)
     noise_model.add_all_qubit_quantum_error(thermal, ["u1", "u2", "u3"])
 
     if measure:
         measure_error = 10 * error
-        measure_error = pauli_error([('X', measure_error), ('I', 1 - measure_error)])
-        noise_model.add_all_qubit_quantum_error(measure_error, "measure")
+        measure_error = array([[1 - measure_error, measure_error], [measure_error, 1 - measure_error]])
+        noise_model.add_all_qubit_readout_error(measure_error)
 
     return noise_model
 

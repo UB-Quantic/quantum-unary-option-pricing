@@ -201,7 +201,7 @@ def load_payoff_quantum_sim(qu, S0, sig, r, T, K):
                                 # generate the target lognormal distribution within the interval
     variance = (np.exp(T * sig ** 2) - 1) * np.exp(2 * mu + T * sig ** 2)
     S = np.linspace(max(mean - 3 * np.sqrt(variance), 0), mean + 3 * np.sqrt(variance), qu)
-    ln = log_normal(S, mu, sig, T)
+    ln = log_normal(S, mu, sig * np.sqrt(T))
     lognormal_parameters = rw_parameters(qu, ln)  # Solve for the parameters needed to create the target lognormal distribution
     prob_loading = rw_circuit(qu, lognormal_parameters)  # Build the probaility loading circuit with the adjusted parameters
     qc = prob_loading + payoff_circuit(qu, K, S) + measure_payoff(qu)
