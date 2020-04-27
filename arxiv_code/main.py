@@ -3,20 +3,34 @@ from errors import errors
 S0 = 2
 K = 1.9
 sig = 0.4
-r = 0.05
+r = 0.051
 T = 0.1
 data = (S0, sig, r, T, K)
 
-max_error_gate = 0.005
-
-steps = 101
-
-Err = errors(data, max_error_gate, steps)
 bins = 8
+max_error_gate = 0.005
 error_name = 'bitflip'
-repeats = 100
-measure=False
+repeats = 20
+measure=True
+thermal=True
+steps = 11
+Err = errors(data, max_error_gate, steps)
+print('binary')
+Err.compute_save_errors_binary(bins, error_name, repeats, measure_error=measure, thermal_error=thermal)
+print('unary')
+Err.compute_save_errors_unary(bins, error_name, repeats, measure_error=measure, thermal_error=thermal)
+print('paint errors')
+Err.paint_errors(bins, error_name, repeats, measure_error=measure, thermal_error=thermal)
 
-Err.compute_save_errors_unary(bins, error_name, repeats)
-Err.compute_save_errors_binary(bins, error_name, repeats)
-Err.paint(bins, error_name, repeats)
+print('KL unary')
+Err.compute_save_KL_unary(8, error_name, repeats, measure_error=measure, thermal_error=thermal)
+print('KL binary')
+Err.compute_save_KL_binary(8, error_name, repeats, measure_error=measure, thermal_error=thermal)
+
+
+print('paint outcomes')
+Err.paint_outcomes(bins, error_name, max_error_gate, repeats, measure_error=measure, thermal_error=thermal)
+print('paint divergences')
+Err.paint_divergences(bins, error_name, repeats, measure_error=measure, thermal_error=thermal)
+
+

@@ -36,3 +36,6 @@ def classical_payoff(S0, sig, r, T, K):
             cl_payoff += lnp[i] * (Sp[i] - K)
 
     return cl_payoff
+
+def KL(p, q):
+    return np.sum(p * np.log(p / q))

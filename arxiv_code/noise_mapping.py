@@ -2,18 +2,31 @@ from qiskit.providers.aer.noise import NoiseModel, depolarizing_error, pauli_err
 from numpy import array
 
 """
-This file
+This file creates noise models for different kinds of error. The noise models are imported from qiskit
 """
 
-def noise_model_measure(error, measure=True):
-    noise_model = NoiseModel()#basis_gates=['id', 'u2', 'u3', 'cx'])
-    p_measure = 10 * error
-    measure_error = pauli_error([('X',p_measure), ('I', 1 - p_measure)])
+def noise_model_measure(error):
+    """
+    Creates errors for readout
+    :param error: Probability of occuring a readout error / 10. This factor is added to maintain comparability with the rest of the code
+    :return: noise model for the error
+    """
+    noise_model = NoiseModel()
+    measure_error = 10 * error
+    measure_error = array([[1 - measure_error, measure_error], [measure_error, 1 - measure_error]])
+    noise_model.add_all_qubit_readout_error(measure_error)
     noise_model.add_all_qubit_readout_error(measure_error, "measure")
 
     return noise_model
 
 def noise_model_phase(error, measure=True, thermal=True):
+    """
+    Creates error for phase flip
+    :param error: Probability of happening a phaseflip
+    :param measure: True or False, whether we include readout errors with probability 10 * error
+    :param thermal: True or False, whether we include thermal relaxation, see noise_model_thermal
+    :return: noise model for the error
+    """
     noise_model = NoiseModel()#basis_gates=['id', 'u2', 'u3', 'cx'])
     phase_error = error
     cz_error = 2 * error
@@ -38,7 +51,14 @@ def noise_model_phase(error, measure=True, thermal=True):
     return noise_model
 
 def noise_model_bit(error, measure=True, thermal=True):
-    noise_model = NoiseModel()#basis_gates=['id', 'u2', 'u3', 'cx'])
+    """
+    Creates error for bit flip
+    :param error: Probability of happening a bitflip
+    :param measure: True or False, whether we include readout errors with probability 10 * error
+    :param thermal: True or False, whether we include thermal relaxation, see noise_model_thermal
+    :return: noise model for the error
+    """
+    noise_model = NoiseModel()
     flip_error = error
     cnot_error = 2 * error
     bit_flip = pauli_error([('X', flip_error), ('I', 1 - flip_error)])
@@ -63,6 +83,13 @@ def noise_model_bit(error, measure=True, thermal=True):
 
 
 def noise_model_bitphase(error, measure=False, thermal=True):
+    """
+    Creates error for bitphase flip
+    :param error: Probability of happening a bitphase flip
+    :param measure: True or False, whether we include readout errors with probability 10 * error
+    :param thermal: True or False, whether we include thermal relaxation, see noise_model_thermal
+    :return: noise model for the error
+    """
     noise_model = NoiseModel()  # basis_gates=['id', 'u2', 'u3', 'cx'])
     cnot_error = 2 * error
     bit_flip = pauli_error([('X', error), ('I', 1 - error)])
@@ -90,7 +117,14 @@ def noise_model_bitphase(error, measure=False, thermal=True):
     return noise_model
 
 def noise_model_depolarizing(error, measure=False, thermal=True):
-    noise_model = NoiseModel()  # basis_gates=['id', 'u2', 'u3', 'cx'])
+    """
+    Creates error for depolarizing channel
+    :param error: Probability of depolarizing channel
+    :param measure: True or False, whether we include readout errors with probability 10 * error
+    :param thermal: True or False, whether we include thermal relaxation, see noise_model_thermal
+    :return: noise model for the error
+    """
+    noise_model = NoiseModel()
     depolarizing = depolarizing_error(error, 1)
     cdepol_error = depolarizing_error(2 * error, 2)
     noise_model.add_all_qubit_quantum_error(cdepol_error, ['cx'], warnings=False)
@@ -111,7 +145,13 @@ def noise_model_depolarizing(error, measure=False, thermal=True):
     return noise_model
 
 def noise_model_thermal(error, measure=False):
-    noise_model = NoiseModel()  # basis_gates=['id', 'u2', 'u3', 'cx'])
+    """
+    Creates error for thermal relaxation for T1, T2 = 1.5, 1.2
+    :param error: time of gate. Normalized to be equal to the error in all other functions
+    :param measure: True or False, whether we include readout errors with probability 10 * error
+    :return: noise model for the error
+    """
+    noise_model = NoiseModel()
     thermal = thermal_relaxation_error(1.5, 1.2, error)
     cthermal = thermal_relaxation_error(1.5, 1.2, 2 * error)
     cthermal = cthermal.tensor(cthermal)

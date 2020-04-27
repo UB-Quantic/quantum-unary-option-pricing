@@ -7,7 +7,11 @@ from aux_functions import log_normal, classical_payoff
 
 def extract_probability(qubits, counts, samples):
     """
-    From the retuned sampling, extract only probabilies of unary states
+    From the retuned sampling, extract probabilities of all states
+    :param qubits: number of qubits of the circuit
+    :param counts: Number of measurements extracted from the circuit
+    :param samples: Number of measurements applied the circuit
+    :return: probabilities of unary states
     """
     form = '{0:0%sb}' % str(qubits) # qubits?
     prob = []
@@ -18,7 +22,11 @@ def extract_probability(qubits, counts, samples):
 def qOr(QC, qubits):
     """
     Component for the comparator
+    :param QC: Quantum circuit the comparator is added to
+    :param qubits: Number of qubits
+    :return: None, updates QC
     """
+
     QC.x(qubits[0])
     QC.x(qubits[1])
     QC.x(qubits[2])
@@ -29,7 +37,13 @@ def qOr(QC, qubits):
 def ccry(QC, ctrls, targ, theta):
     """
     Component for the payoff calculator
+    :param QC: Quantum circuit the payoff calculator is added to
+    :param ctrls: Control qubits
+    :param targ: Target qubit
+    :param theta: Parameters of the payoff calculator
+    :return: None, updates quantum circuit
     """
+
     QC.cu3(theta / 2, 0, 0, ctrls[1], targ)
     QC.cx(ctrls[0], ctrls[1])
     QC.cu3( -theta / 2, 0, 0, ctrls[1], targ)
@@ -37,9 +51,17 @@ def ccry(QC, ctrls, targ, theta):
     QC.cu3( theta / 2, 0, 0, ctrls[0], targ)
     
 
-def load_binary_quantum_sim(qu, S0, sig, r, T, noise_objects):
-    #samples = 2 ** qu
-
+def load_quantum_sim(qu, S0, sig, r, T):
+    """
+    Function to create quantum circuit for the binary representation to return an approximate probability distribution.
+        This function is thought to be the prelude of run_quantum_sim
+    :param qu: Number of qubits
+    :param S0: Initial price
+    :param sig: Volatility
+    :param r: Interest rate
+    :param T: Maturity date
+    :return: quantum circuit, backend, (values of prices, prob. distri. function), (mu, mean, variance)
+    """
     mu = ((r - 0.5 * sig ** 2) * T + np.log(S0)) #parameters for the log_normal distribution
     sigma = sig * np.sqrt(T)
     mean = np.exp(mu + sigma ** 2 / 2)
@@ -62,14 +84,23 @@ def load_binary_quantum_sim(qu, S0, sig, r, T, noise_objects):
     qc = QuantumCircuit(qr, cr)
     uncertainty_model.build(qc, qr)
     qc.measure(np.arange(0, qu), np.arange(0,qu))
-    shots = 10000
 
     dev = Aer.get_backend('qasm_simulator')
-    noise_model, basis_gates, error = noise_objects
 
-    return qu, qc, dev, shots, basis_gates, noise_model, (values, pdf), (mu, mean, variance)
+    return qc, dev, (values, pdf), (mu, mean, variance)
 
-def run_binary_quantum_sim(qu, qc, dev, shots, basis_gates, noise_model):
+def run_quantum_sim(qu, qc, dev, shots, basis_gates, noise_model):
+    """
+    Function to execute quantum circuit for the binary representation to return an approximate probability distribution.
+        This function is thought to be preceded by load_quantum_sim
+    :param qubits: Number of qubits
+    :param qc: quantum circuit
+    :param dev: backend
+    :param shots: number of measurements
+    :param basis_gates: native gates of the device
+    :param noise_model: noise model
+    :return: approximate probability distribution
+    """
     job = execute(qc, dev, shots=shots, basis_gates=basis_gates, noise_model=noise_model)
     result = job.result()
     counts = result.get_counts(qc)
@@ -77,38 +108,18 @@ def run_binary_quantum_sim(qu, qc, dev, shots, basis_gates, noise_model):
     prob_sim = extract_probability(qu, counts, shots)
 
     return prob_sim
-    #cl_payoff = classical_payoff(values, pdf, K)
-
-def binary_benchmark_sim(qu, S0, sig, r, T, noise_objects, err):
-    (S, ln, prob_sim), (mu, mean, variance) = binary_quantum_sim(qu, S0, sig, r, T, noise_objects)
-    Sp = np.linspace(max(mean - 3 * np.sqrt(variance), 0), mean + 3 * np.sqrt(variance), 2 ** qu * 100)  # Generate a the exact target distribution to benchmark against quantum results
-    lnp = log_normal(Sp, mu, sig, T)
-
-    '''
-    Plot the probability of each unary state on the corresponding option price and
-    check against the exact probability drsitribution function for the target lognormal
-
-    '''
-
-    width = (S[1] - S[0]) / 1.2
-    fig, ax = plt.subplots()
-    rects2 = ax.bar(S, prob_sim, width, label='Quantum', alpha=0.8)
-    ax.plot(Sp, (S[1] - S[0]) * lnp / (Sp[1] - Sp[0]), 'C1', label='Exact')
-    ax.scatter(S, ln, s=500, color='C1', label='Exact', marker='_')
-    #ax.vlines(K, 0, max(prob_sim), linestyles='dashed', label='K = {}'.format(K))  # Strike price marker
-    plt.ylabel('Probability')
-    plt.xlabel('Option price')
-    plt.title('Option price distribution for {} qubits - {} error: {} - qasm_simulator'.format(qu, err, (noise_objects[2])))
-    ax.legend()
-    fig.tight_layout()
-    text='binary/qubits.{}_S0.{}_sig.{}_r.{}_T.{}_error.{}_{}.png'.format(qu, S0, sig, r, T, noise_objects[2], err)
-    fig.savefig(text)
-    fig.savefig('binary/try.png')
 
 def comparator(qc, q, K, high, low):
-    '''
+    """
     Circuit that codifies the comparator of the option
-    '''
+    :param qc: quantum circuit the comparator is added to
+    :param q: number of qubits
+    :param K: strike
+    :param high: highest value for prices
+    :param low: lowest value for prices
+    :return: k, updates the circuit
+    """
+
     k = int(np.floor(2 ** q * (K - low) / (high - low)))
     t = 2 ** q - k
     t_bin = np.binary_repr(t, q)
@@ -128,7 +139,14 @@ def comparator(qc, q, K, high, low):
 def rotations(qc, q, k, u=0, error=0.05):
     """
     Circuit for the rotations of the payoff circuit
+    :param qc: quantum circuit the rotations are added to
+    :param q: number of qubits
+    :param k: value k
+    :param u: value u
+    :param error: error of the approximation
+    :return: value c
     """
+
     c = (2 * error) ** (1 / (2 * u + 2))
     g0 = 0.25 * np.pi - c
     qc.ry(2 * g0, 2 * q + 1)
@@ -142,20 +160,33 @@ def rotations(qc, q, k, u=0, error=0.05):
 def payoff_circuit(qc, q, K, high, low):
     """
     Setting all pieces for the payoff (comparatos + rotations) together
+    :param qc: quantum circuit
+    :param q: number of qubits
+    :param K: strike
+    :param high: highest value of prices
+    :param low: lowest value of prices
+    :return: k, c; updates qc
     """
+
     k = comparator(qc, q, K, high, low)
     c = rotations(qc, q, k)
 
     qc.measure([2*q+1], [0])
 
-    return k, c#We need to keep track of these variables
+    return k, c
 
-def load_payoff_quantum_sim(qu, S0, sig, r, T, K, printer=True):
+def load_payoff_quantum_sim(qu, S0, sig, r, T, K):
     """
-    Order for
+    Function to create quantum circuit for the unary representation to return an approximate probability distribution.
+        This function is thought to be the prelude of run_payoff_quantum_sim
+    :param qu: Number of qubits
+    :param S0: Initial price
+    :param sig: Volatility
+    :param r: Interest rate
+    :param T: Maturity date
+    :param K: strike
+    :return: quantum circuit, backend, prices
     """
-    #samples = 2 ** qu
-    shots=10000
 
     mu = ((r - 0.5 * sig ** 2) * T + np.log(S0))  # parameters for the log_normal distribution
     sigma = sig * np.sqrt(T)
@@ -183,9 +214,20 @@ def load_payoff_quantum_sim(qu, S0, sig, r, T, K, printer=True):
 
     dev = Aer.get_backend('qasm_simulator')
 
-    return c, k, high, low, qc, dev, shots
+    return c, k, high, low, qc, dev
 
 def run_payoff_quantum_sim(qu, c, k, high, low, qc, dev, shots, basis_gates, noise_model):
+    """
+    Function to execute quantum circuit for the unary representation to return an approximate payoff.
+        This function is thought to be preceded by load_quantum_sim
+    :param qubits: Number of qubits
+    :param qc: quantum circuit
+    :param dev: backend
+    :param shots: number of measurements
+    :param basis_gates: native gates of the device
+    :param noise_model: noise model
+    :return: approximate payoff
+    """
     job = execute(qc, dev, shots=shots, basis_gates = basis_gates, noise_model = noise_model)
     counts = job.result().get_counts(qc)
 
@@ -196,6 +238,12 @@ def run_payoff_quantum_sim(qu, c, k, high, low, qc, dev, shots, basis_gates, noi
 
 
 def diff_qu_cl(qu_payoff_sim, cl_payoff):
+    """
+    Comparator of quantum and classical payoff
+    :param qu_payoff_sim: quantum approximation for the payoff
+    :param cl_payoff: classical payoff
+    :return: Relative error
+    """
     error = np.abs(100 * (cl_payoff - qu_payoff_sim) / cl_payoff)
 
     return error
