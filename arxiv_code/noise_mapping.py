@@ -5,7 +5,7 @@ from numpy import array
 This file creates noise models for different kinds of error. The noise models are imported from qiskit
 """
 
-def noise_model_measure(error):
+def noise_model_measure(error, measure=True, thermal=True):
     """
     Creates errors for readout
     :param error: Probability of occuring a readout error / 10. This factor is added to maintain comparability with the rest of the code
@@ -15,7 +15,6 @@ def noise_model_measure(error):
     measure_error = 10 * error
     measure_error = array([[1 - measure_error, measure_error], [measure_error, 1 - measure_error]])
     noise_model.add_all_qubit_readout_error(measure_error)
-    noise_model.add_all_qubit_readout_error(measure_error, "measure")
 
     return noise_model
 

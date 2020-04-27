@@ -3,17 +3,17 @@ from errors import errors
 S0 = 2
 K = 1.9
 sig = 0.4
-r = 0.051
+r = 0.05
 T = 0.1
 data = (S0, sig, r, T, K)
 
 bins = 8
 max_error_gate = 0.005
-error_name = 'bitflip'
-repeats = 20
-measure=True
-thermal=True
-steps = 11
+error_name = 'measurement'
+repeats = 100
+measure=False
+thermal=False
+steps = 101
 Err = errors(data, max_error_gate, steps)
 print('binary')
 Err.compute_save_errors_binary(bins, error_name, repeats, measure_error=measure, thermal_error=thermal)

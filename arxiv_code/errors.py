@@ -63,7 +63,7 @@ class errors:
             if measure_error:
                 error_name += '_m'
         elif error_name == 'measurement':
-            noise = noise_model_measurement
+            noise = noise_model_measure
         else:
             raise NameError('Error not indexed')
 
@@ -140,10 +140,10 @@ class errors:
         means_binary = np.mean(matrix_binary, axis=1)
 
         fig, ax = plt.subplots()
-        ax.scatter(self.error_steps, means_unary, s=20, color='C0', label='unary', marker='x')
-        ax.scatter(self.error_steps, means_binary, s=20, color='C1', label='binary', marker='+')
-        ax.fill_between(self.error_steps, maxs_unary, mins_unary, alpha=0.2, facecolor='C0')
-        ax.fill_between(self.error_steps, maxs_binary, mins_binary, alpha=0.2, facecolor='C1')
+        ax.scatter(100 * self.error_steps, means_unary, s=20, color='C0', label='unary', marker='x')
+        ax.scatter(100 * self.error_steps, means_binary, s=20, color='C1', label='binary', marker='+')
+        ax.fill_between(100 * self.error_steps, maxs_unary, mins_unary, alpha=0.2, facecolor='C0')
+        ax.fill_between(100 * self.error_steps, maxs_binary, mins_binary, alpha=0.2, facecolor='C1')
         plt.ylabel('percentage off classical value (%)')
         plt.xlabel('single-qubit gate error (%)')
         ax.legend()
@@ -156,6 +156,10 @@ class errors:
     def compute_save_outcomes_binary(self, bins, error_name, error_value, repeats, measure_error=False, thermal_error=False, shots=10000):
         error_name = self.change_name(error_name, measure_error, thermal_error)
         qubits = int(np.log2(bins))
+        try:
+            os.makedirs(name_folder_data(self.data) + '/%s_bins/binary/probs' % bins)
+        except:
+            pass
         noise = self.select_error(error_name, measure_error=measure_error, thermal_error=thermal_error)
         noise_model = noise(error_value, measure=measure_error, thermal=thermal_error)
         basis_gates = noise_model.basis_gates
@@ -164,14 +168,18 @@ class errors:
         for r in range(repeats):
             probs[:, r] = bin.run_quantum_sim(qubits, qc, dev, shots, basis_gates, noise_model)
 
-        np.savetxt(name_folder_data(self.data) + '/%s_bins/binary/'%bins +
-                   error_name + '_gate(%s)_repeats(%s)_probs.npz'%(error_value, repeats), probs)
+        np.savetxt(name_folder_data(self.data) + '/%s_bins/binary/probs/'%bins +
+                   error_name + '_gate(%s)_repeats(%s).npz'%(error_value, repeats), probs)
 
         return probs
 
     def compute_save_outcomes_unary(self, bins, error_name, error_value, repeats, measure_error=False, thermal_error=False, shots=10000):
         error_name = self.change_name(error_name, measure_error, thermal_error)
         qubits = bins
+        try:
+            os.makedirs(name_folder_data(self.data) + '/%s_bins/unary/probs' % bins)
+        except:
+            pass
         noise = self.select_error(error_name, measure_error=measure_error, thermal_error=thermal_error)
         noise_model = noise(error_value, measure=measure_error, thermal=thermal_error)
         basis_gates = noise_model.basis_gates
@@ -182,22 +190,22 @@ class errors:
             probs[:, r] = [res[2**i] for i in range(qubits)]
             probs[:, r] /= np.sum(probs[:, r])
 
-        np.savetxt(name_folder_data(self.data) + '/%s_bins/unary/'%bins +
-                    error_name + '_gate(%s)_repeats(%s)_probs.npz'%(error_value, repeats), probs)
+        np.savetxt(name_folder_data(self.data) + '/%s_bins/unary/probs/'%bins +
+                    error_name + '_gate(%s)_repeats(%s).npz'%(error_value, repeats), probs)
 
         return probs
 
     def paint_outcomes(self, bins, error_name, error_value, repeats, bounds=0.15, measure_error=False, thermal_error=False):
         error_name = self.change_name(error_name, measure_error, thermal_error)
 
-        matrix_unary = np.loadtxt(name_folder_data(self.data) + '/%s_bins/unary/'%bins +
-                            error_name + '_gate(%s)_repeats(%s)_probs.npz'%(error_value, repeats))
+        matrix_unary = np.loadtxt(name_folder_data(self.data) + '/%s_bins/unary/probs/'%bins +
+                            error_name + '_gate(%s)_repeats(%s).npz'%(error_value, repeats))
         matrix_unary = np.sort(matrix_unary, axis=1)
         mins_unary = matrix_unary[:, int(bounds * (repeats))]
         maxs_unary = matrix_unary[:, int(-(bounds) * (repeats)-1)]
         means_unary = np.mean(matrix_unary, axis=1)
-        matrix_binary = np.loadtxt(name_folder_data(self.data) + '/%s_bins/binary/'%bins +
-                            error_name + '_gate(%s)_repeats(%s)_probs.npz'%(error_value, repeats))
+        matrix_binary = np.loadtxt(name_folder_data(self.data) + '/%s_bins/binary/probs/'%bins +
+                            error_name + '_gate(%s)_repeats(%s).npz'%(error_value, repeats))
         matrix_binary = np.sort(matrix_binary, axis=1)
         mins_binary = matrix_binary[:, int(bounds * (repeats))]
         maxs_binary = matrix_binary[:, int(-(bounds) * (repeats)-1)]
@@ -236,8 +244,8 @@ class errors:
         divergences = np.zeros((len(self.error_steps), repeats))
         for i, error in enumerate(self.error_steps):
             try:
-                probs = np.loadtxt(name_folder_data(self.data) + '/%s_bins/binary/' % bins +
-                           error_name + '_gate(%s)_repeats(%s)_probs.npz' % (error, repeats))
+                probs = np.loadtxt(name_folder_data(self.data) + '/%s_bins/binary/probs/' % bins +
+                           error_name + '_gate(%s)_repeats(%s).npz' % (error, repeats))
 
             except:
                 probs = self.compute_save_outcomes_binary(bins, error_name, error, repeats,
@@ -247,8 +255,8 @@ class errors:
             for j in range(probs.shape[1]):
                 divergences[i, j] = KL(probs[:, j], pdf)
 
-            np.savetxt(name_folder_data(self.data) + '/%s_bins/binary/' % bins +
-                error_name + '_gate(%s)_repeats(%s)_divergences.npz' % (self.max_gate_error, repeats), divergences)
+            np.savetxt(name_folder_data(self.data) + '/%s_bins/binary/probs/' % bins +
+                error_name + '_gate(%s)_repeats(%s)_div.npz' % (self.max_gate_error, repeats), divergences)
 
     def compute_save_KL_unary(self, bins, error_name, repeats, measure_error=False, thermal_error=False, shots=10000):
         error_name = self.change_name(error_name, measure_error, thermal_error)
@@ -257,8 +265,8 @@ class errors:
         for i, error in enumerate(self.error_steps):
             try:
 
-                probs = np.loadtxt(name_folder_data(self.data) + '/%s_bins/unary/' % bins +
-                                   error_name + '_gate(%s)_repeats(%s)_probs.npz' % (error, repeats))
+                probs = np.loadtxt(name_folder_data(self.data) + '/%s_bins/unary/probs/' % bins +
+                                   error_name + '_gate(%s)_repeats(%s).npz' % (error, repeats))
 
             except:
                 probs = self.compute_save_outcomes_unary(bins, error_name, error, repeats,
@@ -268,16 +276,16 @@ class errors:
             for j in range(probs.shape[1]):
                 divergences[i, j] = KL(probs[:, j], pdf)
 
-        np.savetxt(name_folder_data(self.data) + '/%s_bins/unary/' % bins +
-                   error_name + '_gate(%s)_repeats(%s)_divergences.npz' % (self.max_gate_error, repeats), divergences)
+            np.savetxt(name_folder_data(self.data) + '/%s_bins/unary/probs/' % bins +
+                   error_name + '_gate(%s)_repeats(%s)_div.npz' % (self.max_gate_error, repeats), divergences)
 
     def paint_divergences(self, bins, error_name, repeats, bounds=0.15, measure_error=False, thermal_error=False):
         error_name = self.change_name(error_name, measure_error, thermal_error)
 
-        matrix_unary = np.loadtxt(name_folder_data(self.data) + '/%s_bins/unary/'%bins
-                            + error_name + '_gate(%s)_repeats(%s)_divergences.npz' % (self.max_gate_error, repeats))
-        matrix_binary = np.loadtxt(name_folder_data(self.data) + '/%s_bins/binary/' % bins
-                                         + error_name + '_gate(%s)_repeats(%s)_divergences.npz' % (self.max_gate_error, repeats))
+        matrix_unary = np.loadtxt(name_folder_data(self.data) + '/%s_bins/unary/probs/'%bins
+                            + error_name + '_gate(%s)_repeats(%s)_div.npz' % (self.max_gate_error, repeats))
+        matrix_binary = np.loadtxt(name_folder_data(self.data) + '/%s_bins/binary/probs/' % bins
+                                         + error_name + '_gate(%s)_repeats(%s)_div.npz' % (self.max_gate_error, repeats))
         matrix_unary = np.sort(matrix_unary, axis=1)
         mins_unary = matrix_unary[:, int(bounds * (repeats))]
         maxs_unary = matrix_unary[:, int(-(bounds) * (repeats)-1)]
@@ -288,17 +296,17 @@ class errors:
         means_binary = np.mean(matrix_binary, axis=1)
 
         fig, ax = plt.subplots()
-        ax.scatter(self.error_steps, means_unary, s=20, color='C0', label='unary', marker='x')
-        ax.scatter(self.error_steps, means_binary, s=20, color='C1', label='binary', marker='+')
-        ax.fill_between(self.error_steps, maxs_unary, mins_unary, alpha=0.2, facecolor='C0')
-        ax.fill_between(self.error_steps, maxs_binary, mins_binary, alpha=0.2, facecolor='C1')
+        ax.scatter(100 * self.error_steps, means_unary, s=20, color='C0', label='unary', marker='x')
+        ax.scatter(100 * self.error_steps, means_binary, s=20, color='C1', label='binary', marker='+')
+        ax.fill_between(100 * self.error_steps, maxs_unary, mins_unary, alpha=0.2, facecolor='C0')
+        ax.fill_between(100 * self.error_steps, maxs_binary, mins_binary, alpha=0.2, facecolor='C1')
         plt.ylabel('KL Divergence')
         plt.xlabel('single-qubit gate error (%)')
         plt.yscale('log')
         ax.legend()
         fig.tight_layout()
         fig.savefig(name_folder_data(self.data) + '/%s_bins/' % bins
-                                  + error_name + '_gate(%s)_steps(%s)_repeats(%s)_divergence.pdf' % (
+                                  + error_name + '_gate(%s)_steps(%s)_repeats(%s)_div.pdf' % (
                                   self.max_gate_error, self.steps, repeats))
 
 
