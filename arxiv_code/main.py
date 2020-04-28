@@ -11,11 +11,12 @@ bins = 8
 max_error_gate = 0.005
 error_name = 'measurement'
 repeats = 100
-measure=False
-thermal=False
+measure = False
+thermal = False
 steps = 101
 Err = errors(data, max_error_gate, steps)
-print('binary')
+
+'''print('binary')
 Err.compute_save_errors_binary(bins, error_name, repeats, measure_error=measure, thermal_error=thermal)
 print('unary')
 Err.compute_save_errors_unary(bins, error_name, repeats, measure_error=measure, thermal_error=thermal)
@@ -25,7 +26,7 @@ Err.paint_errors(bins, error_name, repeats, measure_error=measure, thermal_error
 print('KL unary')
 Err.compute_save_KL_unary(8, error_name, repeats, measure_error=measure, thermal_error=thermal)
 print('KL binary')
-Err.compute_save_KL_binary(8, error_name, repeats, measure_error=measure, thermal_error=thermal)
+Err.compute_save_KL_binary(8, error_name, repeats, measure_error=measure, thermal_error=thermal)'''
 
 
 print('paint outcomes')

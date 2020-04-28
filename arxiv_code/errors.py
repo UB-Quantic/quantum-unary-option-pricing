@@ -197,7 +197,7 @@ class errors:
 
     def paint_outcomes(self, bins, error_name, error_value, repeats, bounds=0.15, measure_error=False, thermal_error=False):
         error_name = self.change_name(error_name, measure_error, thermal_error)
-
+        print(error_name)
         matrix_unary = np.loadtxt(name_folder_data(self.data) + '/%s_bins/unary/probs/'%bins +
                             error_name + '_gate(%s)_repeats(%s).npz'%(error_value, repeats))
         matrix_unary = np.sort(matrix_unary, axis=1)
@@ -221,14 +221,14 @@ class errors:
         exact_pdf = exact_pdf * pdf[0] / exact_pdf[0]
         fig, ax = plt.subplots()
 
-        ax.bar(values + width / 4, maxs_binary, width / 2, alpha=0.2, color='C1')
+        ax.bar(values + width / 4, maxs_binary, width / 2, alpha=0.3, color='C1')
         ax.bar(values + width / 4, mins_binary, width / 2, alpha=.75, color='C1', label='binary')
-        ax.bar(values - width / 4, maxs_unary, width / 2, alpha=0.2, color='C0')
+        ax.bar(values - width / 4, maxs_unary, width / 2, alpha=0.3, color='C0')
         ax.bar(values - width / 4, mins_unary, width / 2, alpha=.75, color='C0', label='unary')
         ax.plot(exact_values, exact_pdf, color='black')
         ax.scatter(values - width / 4, means_unary, s=20, color='C0', marker='x', zorder=10)
         ax.scatter(values + width / 4, means_binary, s=20, color='C1', marker='x', zorder=10)
-        ax.scatter(values, pdf, s=20, color='black', label='PDF', marker='o', zorder=10)
+        ax.scatter(values, pdf, s=1250, color='black', label='PDF', marker='_', zorder=9)
         plt.ylabel('Probability')
         plt.xlabel('Option price')
         # plt.title('Option price distribution for {} qubits - {} error: {} - qasm_simulator'.format(qu, err, (noise_objects[2])))
