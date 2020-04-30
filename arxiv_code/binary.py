@@ -4,7 +4,7 @@ from qiskit import QuantumCircuit, execute, Aer, QuantumRegister, ClassicalRegis
 from qiskit.aqua.components.uncertainty_models import LogNormalDistribution
 from aux_functions import log_normal, classical_payoff
 
-
+dev = Aer.get_backend('qasm_simulator')
 def extract_probability(qubits, counts, samples):
     """
     From the retuned sampling, extract probabilities of all states
@@ -85,11 +85,9 @@ def load_quantum_sim(qu, S0, sig, r, T):
     uncertainty_model.build(qc, qr)
     qc.measure(np.arange(0, qu), np.arange(0,qu))
 
-    dev = Aer.get_backend('qasm_simulator')
+    return qc, (values, pdf), (mu, mean, variance)
 
-    return qc, dev, (values, pdf), (mu, mean, variance)
-
-def run_quantum_sim(qu, qc, dev, shots, basis_gates, noise_model):
+def run_quantum_sim(qu, qc, shots, basis_gates, noise_model):
     """
     Function to execute quantum circuit for the binary representation to return an approximate probability distribution.
         This function is thought to be preceded by load_quantum_sim
@@ -248,3 +246,109 @@ def diff_qu_cl(qu_payoff_sim, cl_payoff):
 
     return error
 
+def diffusion_operator(qubits):
+    C = QuantumCircuit(2 * qubits+1)
+
+    for q in range(qubits):
+        C.x(q)
+    C.h(qubits)
+    C.mct([range(qubits)], qubits, ancilla_qubits=[range(qubits, 2 * (qubits - 1), 1)],mode='v-chain')  #THIS IS A VERY HEAVY GATE!!!!!
+    for q in range(qubits):
+        C.x(q)
+    C.h(qubits)
+    return C
+
+
+def oracle_operator(qubits):
+    C = QuantumCircuit(qubits + 1)
+    C.z(qubits)
+
+    return C
+
+
+def load_Q_operator(qu, iterations, S0, sig, r, T, K):
+    """
+    Function to create quantum circuit for the unary representation to return an approximate probability distribution.
+        This function is thought to be the prelude of run_payoff_quantum_sim
+    :param qu: Number of qubits
+    :param S0: Initial price
+    :param sig: Volatility
+    :param r: Interest rate
+    :param T: Maturity date
+    :param K: strike
+    :return: quantum circuit, backend, prices
+    """
+
+    mu = ((r - 0.5 * sig ** 2) * T + np.log(S0))  # parameters for the log_normal distribution
+    sigma = sig * np.sqrt(T)
+    mean = np.exp(mu + sigma ** 2 / 2)
+    variance = (np.exp(sigma ** 2) - 1) * np.exp(2 * mu + sigma ** 2)
+    stddev = np.sqrt(variance)
+
+    # lowest and highest value considered for the spot price; in between, an equidistant discretization is considered.
+    low = np.maximum(0, mean - 3 * stddev)
+    high = mean + 3 * stddev
+    #S = np.linspace(low, high, samples)
+
+    # construct circuit factory for uncertainty model
+    uncertainty_model = LogNormalDistribution(qu, mu=mu, sigma=sigma, low=low, high=high)
+
+    #values = uncertainty_model.values
+    #pdf = uncertainty_model.probabilities
+
+    qr = QuantumRegister(2*qu + 2)
+    cr = ClassicalRegister(1)
+    qc = QuantumCircuit(qr, cr)
+    uncertainty_model.build(qc, qr)
+
+    k, c = payoff_circuit(qc, qu, K, high, low)
+
+    prob_loading = uncertainty_model.build(qc, qr)
+    prob_loading_inv = prob_loading.inv()
+    payoff = payoff_circuit(qu, K, S)
+    payoff_inv = payoff_circuit_inv(qu, K, S)
+
+    diffusion = diffusion_operator(qu)
+    oracle = oracle_operator(qu)
+
+    qc = prob_loading + payoff
+    qc_Q = oracle + payoff_inv + prob_loading_inv + diffusion + prob_loading + payoff
+    for i in range(iterations):
+        qc += qc_Q
+    qc += measure_payoff(qu)
+
+    return qc
+
+    return c, k, high, low, qc, dev
+
+def run_payoff_quantum_sim(qu, c, k, high, low, qc, dev, shots, basis_gates, noise_model):
+    """
+    Function to execute quantum circuit for the unary representation to return an approximate payoff.
+        This function is thought to be preceded by load_quantum_sim
+    :param qubits: Number of qubits
+    :param qc: quantum circuit
+    :param dev: backend
+    :param shots: number of measurements
+    :param basis_gates: native gates of the device
+    :param noise_model: noise model
+    :return: approximate payoff
+    """
+    job = execute(qc, dev, shots=shots, basis_gates = basis_gates, noise_model = noise_model)
+    counts = job.result().get_counts(qc)
+
+    prob = counts['1'] / (counts['1'] + counts['0'])
+    qu_payoff = ((prob - 0.5 + c) * (2 ** qu - 1 - k) / 2 / c) * (high - low) / 2 ** qu
+
+    return qu_payoff
+
+
+def diff_qu_cl(qu_payoff_sim, cl_payoff):
+    """
+    Comparator of quantum and classical payoff
+    :param qu_payoff_sim: quantum approximation for the payoff
+    :param cl_payoff: classical payoff
+    :return: Relative error
+    """
+    error = np.abs(100 * (cl_payoff - qu_payoff_sim) / cl_payoff)
+
+    return error

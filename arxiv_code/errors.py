@@ -309,6 +309,16 @@ class errors:
                                   + error_name + '_gate(%s)_steps(%s)_repeats(%s)_div.pdf' % (
                                   self.max_gate_error, self.steps, repeats))
 
+    def test_inversion(self, bins, error_name, error_value, measure_error=False, thermal_error=False, shots=10000):
+        error_name = self.change_name(error_name, measure_error, thermal_error)
+        qubits = bins
+        noise = self.select_error(error_name, measure_error=measure_error, thermal_error=thermal_error)
+        noise_model = noise(error_value, measure=measure_error, thermal=thermal_error)
+        basis_gates = noise_model.basis_gates
+        probs = un.test_inversion_payoff(qubits, self.S0, self.sig, self.r, self.T, self.K, shots, basis_gates, noise_model)
+
+        return probs
+
 
 
 

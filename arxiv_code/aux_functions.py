@@ -39,3 +39,37 @@ def classical_payoff(S0, sig, r, T, K):
 
 def KL(p, q):
     return np.sum(p * np.log(p / q))
+
+
+def find_next_j(j, theta_l, theta_h, up):
+    J_ = 4 * j + 2
+    theta_min = J_ * theta_l
+    theta_max = J_ * theta_h
+    J_max = np.floor(np.pi / (theta_h - theta_l))
+    J = J_max - int(J_max - 2) // 4
+
+    while J >= 2 * J_:
+        q = J / J_
+        if np.remainder(q * theta_max, 2 * np.pi) < np.pi:
+            J_ = J
+            up = True
+            j = (J_ - 2) / 4
+            return j, up
+        elif np.remainder(q * theta_max, 2 * np.pi) >= np.pi and np.remainder(q * theta_min, 2 * np.pi) >= np.pi:
+            J_ = J
+            up = False
+            j = (J_ - 2) / 4
+            return j, up
+
+        else:
+            J = J - 4
+
+    return (j, up)
+
+def chernoff(m, c):
+    a = 1 / m * (np.log(.5 * (1 - c)))
+    delta_plus = 2 - np.sqrt(4 - 2 * a)
+    delta_minus = np.sqrt(np.log(2 / (1 - c)) * 2 / m)
+    a_max, a_min = a * (1 + delta_plus), a * (1 - delta_minus)
+    return a_max, a_min
+
