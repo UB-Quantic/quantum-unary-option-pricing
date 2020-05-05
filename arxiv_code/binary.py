@@ -107,55 +107,60 @@ def run_quantum_sim(qu, qc, shots, basis_gates, noise_model):
 
     return prob_sim
 
-def comparator(qc, q, K, high, low):
+def comparator(qubits, K, high, low):
     """
     Circuit that codifies the comparator of the option
     :param qc: quantum circuit the comparator is added to
-    :param q: number of qubits
+    :param qubits: number of qubits
     :param K: strike
     :param high: highest value for prices
     :param low: lowest value for prices
     :return: k, updates the circuit
     """
+    qr = QuantumRegister(2 * qubits + 2)
+    cr = ClassicalRegister(1)
+    qc = QuantumCircuit(qr, cr)
 
-    k = int(np.floor(2 ** q * (K - low) / (high - low)))
-    t = 2 ** q - k
-    t_bin = np.binary_repr(t, q)
+    k = int(np.floor(2 ** qubits * (K - low) / (high - low)))
+    t = 2 ** qubits - k
+    t_bin = np.binary_repr(t, qubits)
     if t_bin[-1] == '1':
-        qc.cx(0, q)
+        qc.cx(0, qubits)
 
-    for i in range(q - 1):
+    for i in range(qubits - 1):
         if t_bin[-2 - i] == '0':
-            qc.ccx(1 + i, q + i, q + 1 + i)
+            qc.ccx(1 + i, qubits + i, qubits + 1 + i)
         elif t_bin[-2 - i] == '1':
-            qOr(qc, [1 + i, q + i, q + 1 + i])
+            qOr(qc, [1 + i, qubits + i, qubits + 1 + i])
 
-    qc.cx(2 * q - 1, 2 * q)
-    return k
+    qc.cx(2 * qubits - 1, 2 * qubits)
+    return qc, k
 
 
-def rotations(qc, q, k, u=0, error=0.05):
+def rotations(qubits, k, u=0, error=0.05):
     """
     Circuit for the rotations of the payoff circuit
-    :param qc: quantum circuit the rotations are added to
-    :param q: number of qubits
+    :param qubits: number of qubits
     :param k: value k
     :param u: value u
     :param error: error of the approximation
     :return: value c
     """
 
+    qr = QuantumRegister(2 * qubits + 2)
+    cr = ClassicalRegister(1)
+    qc = QuantumCircuit(qr, cr)
     c = (2 * error) ** (1 / (2 * u + 2))
     g0 = 0.25 * np.pi - c
-    qc.ry(2 * g0, 2 * q + 1)
-    qc.cu3(4 * c * k / (k - 2 ** q + 1), 0, 0, 2 * q, 2 * q + 1)
-    for _ in range(q):
-        ccry(qc, [_, 2 * q], 2 * q + 1, 2 ** (2 + _) * c / (2 ** q - 1 - k))
+    qc.ry(2 * g0, 2 * qubits + 1)
+    qc.cu3(4 * c * k / (k - 2 ** qubits + 1), 0, 0, 2 * qubits, 2 * qubits + 1)
+    for _ in range(qubits):
+        ccry(qc, [_, 2 * qubits], 2 * qubits + 1, 2 ** (2 + _) * c / (2 ** qubits - 1 - k))
 
-    return c
+    return qc, c
 
 
-def payoff_circuit(qc, q, K, high, low):
+def payoff_circuit(q, K, high, low):
     """
     Setting all pieces for the payoff (comparatos + rotations) together
     :param qc: quantum circuit
@@ -166,12 +171,12 @@ def payoff_circuit(qc, q, K, high, low):
     :return: k, c; updates qc
     """
 
-    k = comparator(qc, q, K, high, low)
-    c = rotations(qc, q, k)
+    circuit_comp, k = comparator(q, K, high, low)
+    circuit_rot, c = rotations(q, k)
+    qc = circuit_comp + circuit_rot
 
-    qc.measure([2*q+1], [0])
 
-    return k, c
+    return qc, (k, c)
 
 def load_payoff_quantum_sim(qu, S0, sig, r, T, K):
     """
@@ -208,13 +213,14 @@ def load_payoff_quantum_sim(qu, S0, sig, r, T, K):
     qc = QuantumCircuit(qr, cr)
     uncertainty_model.build(qc, qr)
 
-    k, c = payoff_circuit(qc, qu, K, high, low)
+    pay_circ, (k, c) = payoff_circuit(qu, K, high, low)
 
-    dev = Aer.get_backend('qasm_simulator')
+    qc.append(pay_circ)
+    qc.measure([2 * qu + 1], [0])
 
-    return c, k, high, low, qc, dev
+    return c, k, high, low, qc
 
-def run_payoff_quantum_sim(qu, c, k, high, low, qc, dev, shots, basis_gates, noise_model):
+def run_payoff_quantum_sim(qu, c, k, high, low, qc, shots, basis_gates, noise_model):
     """
     Function to execute quantum circuit for the unary representation to return an approximate payoff.
         This function is thought to be preceded by load_quantum_sim
@@ -299,14 +305,11 @@ def load_Q_operator(qu, iterations, S0, sig, r, T, K):
     qr = QuantumRegister(2*qu + 2)
     cr = ClassicalRegister(1)
     qc = QuantumCircuit(qr, cr)
-    uncertainty_model.build(qc, qr)
-
-    k, c = payoff_circuit(qc, qu, K, high, low)
 
     prob_loading = uncertainty_model.build(qc, qr)
     prob_loading_inv = prob_loading.inv()
-    payoff = payoff_circuit(qu, K, S)
-    payoff_inv = payoff_circuit_inv(qu, K, S)
+    payoff, (k, c) = payoff_circuit(qu, K, high, low)
+    payoff_inv = payoff.inv()
 
     diffusion = diffusion_operator(qu)
     oracle = oracle_operator(qu)
@@ -315,16 +318,28 @@ def load_Q_operator(qu, iterations, S0, sig, r, T, K):
     qc_Q = oracle + payoff_inv + prob_loading_inv + diffusion + prob_loading + payoff
     for i in range(iterations):
         qc += qc_Q
-    qc += measure_payoff(qu)
 
+    qc.measure([2 * qu + 1], [0])
     return qc
 
-    return c, k, high, low, qc, dev
+def run_Q_operator(qc, shots, basis_gates, noise_model):
 
-def run_payoff_quantum_sim(qu, c, k, high, low, qc, dev, shots, basis_gates, noise_model):
+    job_payoff_sim = execute(qc, dev, shots=shots, basis_gates=basis_gates,
+                             noise_model=noise_model)  # Run the complete payoff expectation circuit through a simulator
+    # and sample the ancilla qubit
+    counts_payoff_sim = job_payoff_sim.result().get_counts(qc)
+    ones = counts_payoff_sim['1']
+    zeroes = counts_payoff_sim['0']
+    prob_1 = ones / (ones + zeroes)
+
+    return prob_1
+
+def get_payoff_from_prob(prob, qu, c, k, high, low):
+    # Quizás esta función pueda separarse de las demás
     """
     Function to execute quantum circuit for the unary representation to return an approximate payoff.
         This function is thought to be preceded by load_quantum_sim
+    :param prob: probability of 1 measured
     :param qubits: Number of qubits
     :param qc: quantum circuit
     :param dev: backend
@@ -333,22 +348,7 @@ def run_payoff_quantum_sim(qu, c, k, high, low, qc, dev, shots, basis_gates, noi
     :param noise_model: noise model
     :return: approximate payoff
     """
-    job = execute(qc, dev, shots=shots, basis_gates = basis_gates, noise_model = noise_model)
-    counts = job.result().get_counts(qc)
-
-    prob = counts['1'] / (counts['1'] + counts['0'])
     qu_payoff = ((prob - 0.5 + c) * (2 ** qu - 1 - k) / 2 / c) * (high - low) / 2 ** qu
 
     return qu_payoff
 
-
-def diff_qu_cl(qu_payoff_sim, cl_payoff):
-    """
-    Comparator of quantum and classical payoff
-    :param qu_payoff_sim: quantum approximation for the payoff
-    :param cl_payoff: classical payoff
-    :return: Relative error
-    """
-    error = np.abs(100 * (cl_payoff - qu_payoff_sim) / cl_payoff)
-
-    return error

@@ -1,4 +1,6 @@
 import numpy as np
+from scipy.optimize import newton
+import matplotlib.pyplot as plt
 
 def log_normal(x, mu, sig):
     """
@@ -13,7 +15,7 @@ def log_normal(x, mu, sig):
     f = log_norm*dx/(np.sum(log_norm * dx))
     return f
 
-def classical_payoff(S0, sig, r, T, K):
+def classical_payoff(S0, sig, r, T, K, samples=10000):
     """
     Function computing the payoff classically given some data.
     :param S0: initial price
@@ -24,7 +26,6 @@ def classical_payoff(S0, sig, r, T, K):
     :return: classical payoff
     """
     mu = (r - 0.5 * sig ** 2) * T + np.log(S0)  # Define all the parameters to be used in the computation
-    samples = 10000
     mean = np.exp(mu + 0.5 * T * sig ** 2)  # Set the relevant zone of study and create the mapping between qubit and option price, and
     # generate the target lognormal distribution within the interval
     variance = (np.exp(T * sig ** 2) - 1) * np.exp(2 * mu + T * sig ** 2)
@@ -45,12 +46,13 @@ def find_next_j(j, theta_l, theta_h, up):
     J_ = 4 * j + 2
     theta_min = J_ * theta_l
     theta_max = J_ * theta_h
-    J_max = np.floor(np.pi / (theta_h - theta_l))
-    J = J_max - int(J_max - 2) // 4
+    print(theta_h - theta_l)
+    J_max = (np.floor(np.pi / (theta_h - theta_l)))
+    J = J_max - (J_max - 2) % 4
 
     while J >= 2 * J_:
         q = J / J_
-        if np.remainder(q * theta_max, 2 * np.pi) < np.pi:
+        if np.remainder(q * theta_max, 2 * np.pi) < np.pi and np.remainder(q * theta_min, 2 * np.pi) < np.pi:
             J_ = J
             up = True
             j = (J_ - 2) / 4
@@ -67,9 +69,14 @@ def find_next_j(j, theta_l, theta_h, up):
     return (j, up)
 
 def chernoff(m, c):
-    a = 1 / m * (np.log(.5 * (1 - c)))
-    delta_plus = 2 - np.sqrt(4 - 2 * a)
-    delta_minus = np.sqrt(np.log(2 / (1 - c)) * 2 / m)
-    a_max, a_min = a * (1 + delta_plus), a * (1 - delta_minus)
-    return a_max, a_min
+    try:
+        delta_plus = np.real(newton(bound, 1, args=(m, c / 2))) # Aquí hay problemas
+        delta_minus = np.real(newton(bound, -1, args=(m, c / 2)))
+    except:
+        delta_plus = np.sqrt(2 / m * np.log(2 / c))
+        delta_minus = - delta_plus
+    m_max, m_min = m * (1 + delta_plus), m * (1 + delta_minus)
+    return m_min, m_max
 
+def bound(delta, mu, constant):
+    return np.power((np.exp(delta))/(1 + delta)**(1+delta), mu) - constant

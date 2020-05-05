@@ -7,7 +7,8 @@ from noise_mapping import *
 from time import time
 import os
 import matplotlib.pyplot as plt
-
+from qiskit import execute
+from qiskit import Aer
 """
 This file creates the Python class defining all quantities to perform 
 """
@@ -110,9 +111,9 @@ class errors:
             print(i)
             noise_model = noise(error, measure=measure_error, thermal=thermal_error)
             basis_gates = noise_model.basis_gates
-            qc, dev, S = un.load_payoff_quantum_sim(qubits, self.S0, self.sig, self.r, self.T, self.K)
+            qc, S = un.load_payoff_quantum_sim(qubits, self.S0, self.sig, self.r, self.T, self.K)
             for r in range(repeats):
-                qu_payoff_sim = un.run_payoff_quantum_sim(qubits, qc, dev, shots, S, self.K, basis_gates, noise_model)
+                qu_payoff_sim = un.run_payoff_quantum_sim(qubits, qc, shots, S, self.K, basis_gates, noise_model)
                 diff = un.diff_qu_cl(qu_payoff_sim, self.cl_payoff)
                 results[i, r] = diff
         try:
@@ -309,15 +310,119 @@ class errors:
                                   + error_name + '_gate(%s)_steps(%s)_repeats(%s)_div.pdf' % (
                                   self.max_gate_error, self.steps, repeats))
 
-    def test_inversion(self, bins, error_name, error_value, measure_error=False, thermal_error=False, shots=10000):
-        error_name = self.change_name(error_name, measure_error, thermal_error)
-        qubits = bins
+    def unary_iqae(self, bins, error_name, error_value, payoff_e=0.001, alpha=0.1, measure_error=False, thermal_error=False, shots=100):
+        qu = bins
         noise = self.select_error(error_name, measure_error=measure_error, thermal_error=thermal_error)
         noise_model = noise(error_value, measure=measure_error, thermal=thermal_error)
         basis_gates = noise_model.basis_gates
-        probs = un.test_inversion_payoff(qubits, self.S0, self.sig, self.r, self.T, self.K, shots, basis_gates, noise_model)
+        a_l, a_h = un.IQAE(payoff_e, alpha, shots, qu, self.data, basis_gates, noise_model)
+        qc, S = un.load_payoff_quantum_sim(qu, self.S0, self.sig, self.r, self.T, self.K)
+        payoff_l = un.get_payoff_from_prob(a_l * np.pi, qu, S, self.K)
+        payoff_h = un.get_payoff_from_prob(a_h * np.pi, qu, S, self.K)
 
-        return probs
+        print(payoff_l, payoff_h, self.cl_payoff)
+
+    def test_unary_Q(self, qu):
+        S0, sig, r, T, K = self.S0, self.sig, self.r, self.T, self.K
+        iterations = 1
+        iterations = int(iterations)
+        mu = (r - 0.5 * sig ** 2) * T + np.log(S0)  # Define all the parameters to be used in the computation
+        mean = np.exp(
+            mu + 0.5 * T * sig ** 2)  # Set the relevant zone of study and create the mapping between qubit and option price, and
+        # generate the target lognormal distribution within the interval
+        variance = (np.exp(T * sig ** 2) - 1) * np.exp(2 * mu + T * sig ** 2)
+        S = np.linspace(max(mean - 3 * np.sqrt(variance), 0), mean + 3 * np.sqrt(variance), qu)
+        ln = log_normal(S, mu, sig * np.sqrt(T))
+        lognormal_parameters = un.rw_parameters(qu,
+                                             ln)  # Solve for the parameters needed to create the target lognormal distribution
+        prob_loading = un.rw_circuit(qu,
+                                  lognormal_parameters)  # Build the probaility loading circuit with the adjusted parameters
+        prob_loading_inv = un.rw_circuit_inv(qu,
+                                  lognormal_parameters)
+        payoff = un.payoff_circuit(qu, K, S)
+        payoff_inv = un.payoff_circuit_inv(qu, K, S)
+
+        diffusion = un.diffusion_operator(qu)
+        oracle = un.oracle_operator(qu)
+
+        qc = prob_loading + payoff
+        job_payoff_sim = execute(qc, Aer.get_backend('statevector_simulator'))# Run the complete payoff expectation circuit through a simulator
+        statevector = job_payoff_sim.result().data()['statevector']
+        print('algorithm')
+        for i in range(qu):
+            print(statevector[2 ** i], statevector[2 ** qu + 2 ** i])
+
+        job_payoff_sim = execute(qc + diffusion, Aer.get_backend(
+            'statevector_simulator'))  # Run the complete payoff expectation circuit through a simulator
+        statevector = job_payoff_sim.result().data()['statevector']
+        print('diffusion')
+        for i in range(qu):
+            print(statevector[2 ** i], statevector[2 ** qu + 2 ** i])
+
+
+        '''qc_Q = oracle + payoff_inv + prob_loading_inv + diffusion + prob_loading + payoff
+        for i in range(iterations):
+            qc += qc_Q'''
+
+    def test_unary_mlae(self, bins, error_name, error_value, bin_error, measure_error=False, thermal_error=False, shots=100, mode='eis'):
+        mode = mode.lower()
+        if 'lis' in mode:
+            M = np.ceil(1 / bin_error)
+            m_s = np.arange(0, M, 1)
+        elif 'eis' in mode:
+            M = np.ceil(2 * np.log2(1 / bin_error) - 1)
+            print(M)
+            m_s = np.hstack((0, 2 ** np.arange(0, M)))
+            print(m_s)
+        qu = bins
+        noise = self.select_error(error_name, measure_error=measure_error, thermal_error=thermal_error)
+        noise_model = noise(error_value, measure=measure_error, thermal=thermal_error)
+        basis_gates = noise_model.basis_gates
+        qc = un.load_Q_operator(qu, 0, self.S0, self.sig, self.r, self.T, self.K)
+        ones, zeroes = un.run_Q_operator(qu, qc, shots, basis_gates, noise_model)
+
+        a = ones / (ones + zeroes)
+        theta = np.arcsin(np.sqrt(a))
+        i = 0
+        print(np.sin((2 * i + 1) * theta) ** 2, ones / (ones + zeroes))
+        for i in range(1, 10):
+            qc = un.load_Q_operator(qu, i, self.S0, self.sig, self.r, self.T, self.K)
+            ones, zeroes = un.run_Q_operator(qu, qc, shots, basis_gates, noise_model)
+            print(np.sin((2 * i + 1) * theta) ** 2, ones / (ones + zeroes))
+
+
+
+    def unary_mlae(self, bins, error_name, error_value, bin_error, measure_error=False, thermal_error=False, shots=100, mode='eis'):
+        mode = mode.lower()
+        if 'lis' in mode:
+            M = np.ceil(1 / bin_error)
+            m_s = np.arange(0, M, 1)
+        elif 'eis' in mode:
+            M = np.ceil(2 * np.log2(1 / bin_error) - 1)
+            print(M)
+            m_s = np.hstack((0, 2 ** np.arange(0, M)))
+            print(m_s)
+        qu = bins
+        noise = self.select_error(error_name, measure_error=measure_error, thermal_error=thermal_error)
+        noise_model = noise(error_value, measure=measure_error, thermal=thermal_error)
+        basis_gates = noise_model.basis_gates
+
+        a = un.MLAE(qu, self.data, m_s, shots, basis_gates, noise_model)
+        print('theta', np.arcsin(np.sqrt(a)))
+        print('a', a)
+
+        qc, S = un.load_payoff_quantum_sim(qu, self.S0, self.sig, self.r, self.T, self.K)
+        print(S, S[qu - 1])
+        a_exact = self.cl_payoff / (S[qu - 1] - self.K)
+        print('theta_exact', np.arcsin(np.sqrt(a_exact)))
+        print('a exact', a_exact)
+        payoff_qu = un.get_payoff_from_prob(a, qu, S, self.K)
+
+        print(a, payoff_qu, self.cl_payoff)
+
+
+
+
 
 
 

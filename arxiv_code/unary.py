@@ -1,8 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from qiskit import QuantumCircuit, execute, Aer
-from aux_functions import log_normal, classical_payoff, chernoff, find_next_k
+from aux_functions import log_normal, classical_payoff, chernoff, find_next_j
 from binary import extract_probability as extract_probability_all_samples
+from scipy.optimize import newton
 
 """
 This file provides all required functions for performing calculations in unary basis
@@ -11,7 +12,6 @@ This file provides all required functions for performing calculations in unary b
 dev = Aer.get_backend('qasm_simulator')  # Get qasm backend for the simulation of the circuit. With this line, all different references can be removed
 
 def rw_circuit(qubits, parameters):
-    print(dev)
     """
     Circuit that emulates the probability sharing between neighbours seen usually
     in Brownian motion and stochastic systems
@@ -167,7 +167,6 @@ def load_quantum_sim(qu, S0, sig, r, T):
     :param T: Maturity date
     :return: quantum circuit, backend, (values of prices, prob. distri. function), (mu, mean, variance)
     """
-    dev = Aer.get_backend('qasm_simulator') # Get qasm backend for the simulation of the circuit
     mu = (r - 0.5 * sig ** 2) * T + np.log(S0) # Define all the parameters to be used in the computation
     mean = np.exp(mu + 0.5 * T * sig ** 2) # Set the relevant zone of study and create the mapping between qubit and option price, and
                                             #generate the target lognormal distribution within the interval
@@ -178,9 +177,9 @@ def load_quantum_sim(qu, S0, sig, r, T):
     prob_loading = rw_circuit(qu, lognormal_parameters) # Build the probaility loading circuit with the adjusted parameters
     qc = prob_loading + measure_probability(qu) #Circuit to test the precision of the probability loading algorithm
 
-    return qc, dev, (values, pdf), (mu, mean, variance)
+    return qc, (values, pdf), (mu, mean, variance)
 
-def run_quantum_sim(qubits, qc, dev, shots, basis_gates, noise_model):
+def run_quantum_sim(qubits, qc, shots, basis_gates, noise_model):
     """
     Function to execute quantum circuit for the unary representation to return an approximate probability distribution.
         This function is thought to be preceded by load_quantum_sim
@@ -198,32 +197,6 @@ def run_quantum_sim(qubits, qc, dev, shots, basis_gates, noise_model):
     prob_sim = extract_probability_all_samples(qubits, counts_sim, shots)
 
     return prob_sim
-
-def test_inversion_probability(qu, S0, sig, r, T, shots, basis_gates, noise_model):
-    dev = Aer.get_backend('qasm_simulator')  # Get qasm backend for the simulation of the circuit
-    mu = (r - 0.5 * sig ** 2) * T + np.log(S0)  # Define all the parameters to be used in the computation
-    mean = np.exp(
-        mu + 0.5 * T * sig ** 2)  # Set the relevant zone of study and create the mapping between qubit and option price, and
-    # generate the target lognormal distribution within the interval
-    variance = (np.exp(T * sig ** 2) - 1) * np.exp(2 * mu + T * sig ** 2)
-    values = np.linspace(max(mean - 3 * np.sqrt(variance), 0), mean + 3 * np.sqrt(variance), qu)
-    pdf = log_normal(values, mu, sig * np.sqrt(T))
-    lognormal_parameters = rw_parameters(qu,
-                                         pdf)  # Solve for the parameters needed to create the target lognormal distribution
-    prob_loading = rw_circuit(qu,
-                              lognormal_parameters)  # Build the probaility loading circuit with the adjusted parameters
-    prob_loading_inv = rw_circuit_inv(qu,
-                              lognormal_parameters)  # Build the probaility loading circuit with the adjusted parameters
-
-    qc = prob_loading + prob_loading_inv + measure_probability(qu)  # Circuit to test the precision of the probability loading algorithm
-
-    job_sim = execute(qc, dev, shots=shots, basis_gates=basis_gates, noise_model=noise_model)
-    counts_sim = job_sim.result().get_counts(qc)
-
-    prob_sim = extract_probability_all_samples(qu, counts_sim, shots)
-
-    return prob_sim
-
 
 def unary_benchmark_sim(qu, S0, sig, r, T, noise_objects, err): # No hace nada
     """
@@ -342,7 +315,6 @@ def load_payoff_quantum_sim(qu, S0, sig, r, T, K):
     :return: quantum circuit, backend, prices
     """
 
-    dev = Aer.get_backend('qasm_simulator')  # Get qasm backend for the simulation of the circuit
     mu = (r - 0.5 * sig ** 2) * T + np.log(S0)  # Define all the parameters to be used in the computation
     mean = np.exp(mu + 0.5 * T * sig ** 2)  # Set the relevant zone of study and create the mapping between qubit and option price, and
                                 # generate the target lognormal distribution within the interval
@@ -353,10 +325,10 @@ def load_payoff_quantum_sim(qu, S0, sig, r, T, K):
     prob_loading = rw_circuit(qu, lognormal_parameters)  # Build the probaility loading circuit with the adjusted parameters
     qc = prob_loading + payoff_circuit(qu, K, S) + measure_payoff(qu)
 
-    return qc, dev, S
+    return qc, S
 
 
-def run_payoff_quantum_sim(qu, qc, dev, shots, S, K, basis_gates, noise_model):
+def run_payoff_quantum_sim(qu, qc, shots, S, K, basis_gates, noise_model):
     """
     Function to execute quantum circuit for the unary representation to return an approximate payoff.
         This function is thought to be preceded by load_quantum_sim
@@ -382,13 +354,12 @@ def run_payoff_quantum_sim(qu, qc, dev, shots, S, K, basis_gates, noise_model):
                 zeroes+=counts_payoff_sim.get(key)
             else:
                 ones+=counts_payoff_sim.get(key)
-            
+
     qu_payoff_sim = ones * (S[qu - 1]-K) / (ones+zeroes)
 
     return qu_payoff_sim
 
 def test_inversion_payoff(qu, S0, sig, r, T, K, shots, basis_gates, noise_model):
-    dev = Aer.get_backend('qasm_simulator')  # Get qasm backend for the simulation of the circuit
     mu = (r - 0.5 * sig ** 2) * T + np.log(S0)  # Define all the parameters to be used in the computation
     mean = np.exp(
         mu + 0.5 * T * sig ** 2)  # Set the relevant zone of study and create the mapping between qubit and option price, and
@@ -444,7 +415,7 @@ def oracle_operator(qubits):
     return C
 
 def load_Q_operator(qu, iterations, S0, sig, r, T, K):
-
+    iterations = int(iterations)
     mu = (r - 0.5 * sig ** 2) * T + np.log(S0)  # Define all the parameters to be used in the computation
     mean = np.exp(
         mu + 0.5 * T * sig ** 2)  # Set the relevant zone of study and create the mapping between qubit and option price, and
@@ -473,7 +444,6 @@ def load_Q_operator(qu, iterations, S0, sig, r, T, K):
     return qc # Es posible que estas dos funciones puedan unirse
 
 def run_Q_operator(qu, qc, shots, basis_gates, noise_model):
-
     job_payoff_sim = execute(qc, dev, shots=shots, basis_gates=basis_gates,
                              noise_model=noise_model)  # Run the complete payoff expectation circuit through a simulator
     # and sample the ancilla qubit
@@ -490,35 +460,77 @@ def run_Q_operator(qu, qc, shots, basis_gates, noise_model):
             else:
                 ones += counts_payoff_sim.get(key)
 
-    prob_1 = ones / (ones + zeroes)
+    return ones, zeroes
 
-    return prob_1
+def MLAE(qu, data, m_s, shots, basis_gates, noise_model):
+    S0, sig, r, T, K = data
+    ones_s = np.zeros_like(m_s, dtype=int)
+    zeroes_s = np.zeros_like(m_s, dtype=int)
+    for i, m in enumerate(m_s[:1]):
+        qc = load_Q_operator(qu, m, S0, sig, r, T, K)
+        ones, zeroes = run_Q_operator(qu, qc, shots, basis_gates, noise_model)
+        ones_s[i] = int(ones)
+        zeroes_s[i] = int(zeroes)
+        print('m', m, 'ones: ', ones, 'zeroes:', zeroes)
+
+    print('optimizing')
+    theta = np.linspace(0, np.pi / 2, 100000)
+    l = max_likelihood(theta, m_s, ones_s, zeroes_s)
+    max_l = np.max(l)
+    theta_max = theta[np.argmax(l)]
+    return np.sin(theta_max) ** 2
+
+
+def max_likelihood(theta, m_s, ones_s, zeroes_s):
+    if len(m_s) != len(ones_s) or len(m_s) != len(zeroes_s):
+        raise ValueError('Dimension mismatch')
+    L = 1
+    for i in range(1):
+        print(m_s[i], ones_s[i], zeroes_s[i])
+        L *= np.sin((2 * m_s[i] + 1) * theta)**(2 * ones_s[i])
+        L *= np.cos((2 * m_s[i] + 1) * theta)**(2 * zeroes_s[i])
+        plt.plot(theta, L)
+        plt.show()
+
+
+    return L
 
 
 def IQAE(payoff_e, alpha, shots, qu, data, basis_gates, noise_model):
+    # Hay algún problema ya que converge a valores de casi 0
     S0, sig, r, T, K = data
     i = 0
     j = 0
     num_j = 0
-    a = 0
+    p1 = 0
     up=True
     theta_l, theta_h = 0, np.pi / 2
     N = int(np.ceil(np.pi * 0.25 / payoff_e))
-    c = (1 - alpha) / N
+    c = (1 - alpha) # / N
+    qc = load_Q_operator(qu, j, S0, sig, r, T, K)
 
-    while theta_h - theta_l < 2 * payoff_e:
+    while theta_h - theta_l > 2 * payoff_e:
         i += 1
-        j_, up = find_next_k(j, theta_l, theta_h, up)
-        qc = load_Q_operator(qu, j_, S0, sig, r, T, K)
-        a_ = run_Q_operator(qu, qc, shots, basis_gates, noise_model)
+        j_, up = find_next_j(j, theta_l, theta_h, up)
         if j == j_:
-            a = (num_j * a + a_) / (num_j + 1)
+            p1_ = run_Q_operator(qu, qc, shots, basis_gates, noise_model)
+            p1 = (num_j * p1 + p1_) / (num_j + 1)
             num_j += 1
         else:
-            a = a_
-            num_j = 0
+            j = j_
+            qc = load_Q_operator(qu, j, S0, sig, r, T, K)
+            p1_ = run_Q_operator(qu, qc, shots, basis_gates, noise_model)
+            p1 = p1_
+            num_j = 1
 
-        a_min, a_max = chernoff(a, c)
+        th_a = np.sqrt(np.arcsin(p1)) / (2 * j + 1)
+        a = np.sin(th_a) ** 2
+        print(a)
+        mu = a * shots * num_j
+
+        m_min, m_max = chernoff(mu, c)
+
+        a_min, a_max = m_min / shots / num_j, m_max / shots / num_j
 
         J = 4 * j + 2
 
@@ -527,14 +539,34 @@ def IQAE(payoff_e, alpha, shots, qu, data, basis_gates, noise_model):
         if not up:
             J_theta_max, J_theta_min = - J_theta_min, - J_theta_max
 
-        theta_l = 1 / J * (np.remainder(np.floor(J * theta_l), 2 * np.pi) + J_theta_min / J)
-        theta_h = 1 / J * (np.remainder(np.floor(J * theta_h), 2 * np.pi) + J_theta_max / J)
 
-        #add max number of iterations (N)
+        theta_l = 1 / J * (np.divmod(np.floor(J * theta_l), 2 * np.pi)[0] + J_theta_min / J)
+        theta_h = 1 / J * (np.divmod(np.floor(J * theta_h), 2 * np.pi)[0] + J_theta_max / J)
+
+        # theta_l, theta_h = min(theta_l, theta_h), max(theta_l, theta_h)
+
 
     a_l, a_h = np.sin(theta_l) ** 2, np.sin(theta_h) ** 2
+    print(a_l, a_h)
 
     return a_l, a_h
+
+def get_payoff_from_prob(prob, qu, S, K):
+    # Quizás esta función pueda separarse de las demás
+    """
+    Function to execute quantum circuit for the unary representation to return an approximate payoff.
+        This function is thought to be preceded by load_quantum_sim
+    :param prob: probability of 1 measured
+    :param qubits: Number of qubits
+    :param qc: quantum circuit
+    :param dev: backend
+    :param shots: number of measurements
+    :param basis_gates: native gates of the device
+    :param noise_model: noise model
+    :return: approximate payoff
+    """
+    qu_payoff_sim = prob * (S[qu - 1]-K)
+    return qu_payoff_sim
 
 
 
