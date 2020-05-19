@@ -7,8 +7,12 @@ from noise_mapping import *
 from time import time
 import os
 import matplotlib.pyplot as plt
+from matplotlib import colors
 from qiskit import execute
 from qiskit import Aer
+
+from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
+from qiskit.aqua.components.uncertainty_models import LogNormalDistribution
 """
 This file creates the Python class defining all quantities to perform 
 """
@@ -89,9 +93,9 @@ class errors:
             print(i)
             noise_model = noise(error, measure=measure_error, thermal=thermal_error)
             basis_gates = noise_model.basis_gates
-            c, k, high, low, qc, dev = bin.load_payoff_quantum_sim(qubits, self.S0, self.sig, self.r, self.T, self.K)
+            c, k, high, low, qc = bin.load_payoff_quantum_sim(qubits, self.S0, self.sig, self.r, self.T, self.K)
             for r in range(repeats):
-                qu_payoff_sim = bin.run_payoff_quantum_sim(qubits, c, k, high, low, qc, dev, shots, basis_gates, noise_model)
+                qu_payoff_sim = bin.run_payoff_quantum_sim(qubits, c, k, high, low, qc, shots, basis_gates, noise_model)
                 diff = bin.diff_qu_cl(qu_payoff_sim, self.cl_payoff)
                 results[i, r] = diff
         try:
@@ -164,10 +168,10 @@ class errors:
         noise = self.select_error(error_name, measure_error=measure_error, thermal_error=thermal_error)
         noise_model = noise(error_value, measure=measure_error, thermal=thermal_error)
         basis_gates = noise_model.basis_gates
-        qc, dev, (values, pdf), (mu, mean, variance) = bin.load_quantum_sim(qubits, self.S0, self.sig, self.r, self.T)
+        qc, (values, pdf), (mu, mean, variance) = bin.load_quantum_sim(qubits, self.S0, self.sig, self.r, self.T)
         probs = np.zeros((len(values), repeats))
         for r in range(repeats):
-            probs[:, r] = bin.run_quantum_sim(qubits, qc, dev, shots, basis_gates, noise_model)
+            probs[:, r] = bin.run_quantum_sim(qubits, qc, shots, basis_gates, noise_model)
 
         np.savetxt(name_folder_data(self.data) + '/%s_bins/binary/probs/'%bins +
                    error_name + '_gate(%s)_repeats(%s).npz'%(error_value, repeats), probs)
@@ -184,10 +188,10 @@ class errors:
         noise = self.select_error(error_name, measure_error=measure_error, thermal_error=thermal_error)
         noise_model = noise(error_value, measure=measure_error, thermal=thermal_error)
         basis_gates = noise_model.basis_gates
-        qc, dev, (values, pdf), (mu, mean, variance) = un.load_quantum_sim(qubits, self.S0, self.sig, self.r, self.T)
+        qc, (values, pdf), (mu, mean, variance) = un.load_quantum_sim(qubits, self.S0, self.sig, self.r, self.T)
         probs = np.zeros((len(values), repeats))
         for r in range(repeats):
-            res = un.run_quantum_sim(qubits, qc, dev, shots, basis_gates, noise_model)
+            res = un.run_quantum_sim(qubits, qc, shots, basis_gates, noise_model)
             probs[:, r] = [res[2**i] for i in range(qubits)]
             probs[:, r] /= np.sum(probs[:, r])
 
@@ -212,12 +216,11 @@ class errors:
         maxs_binary = matrix_binary[:, int(-(bounds) * (repeats)-1)]
         means_binary = np.mean(matrix_binary, axis=1)
 
-        qc, dev, (values, pdf), (mu, mean, variance) = un.load_quantum_sim(bins, self.S0, self.sig, self.r, self.T)
+        qc, (values, pdf), (mu, mean, variance) = un.load_quantum_sim(bins, self.S0, self.sig, self.r, self.T)
 
         width = (values[1] - values[0]) / 1.3
         exact_values = np.linspace(np.min(values), np.max(values), bins * 100)
         mu = (self.r - 0.5 * self.sig ** 2) * self.T + np.log(self.S0)
-        from aux_functions import log_normal
         exact_pdf = log_normal(exact_values, mu, self.sig * np.sqrt(self.T))
         exact_pdf = exact_pdf * pdf[0] / exact_pdf[0]
         fig, ax = plt.subplots()
@@ -226,10 +229,10 @@ class errors:
         ax.bar(values + width / 4, mins_binary, width / 2, alpha=.75, color='C1', label='binary')
         ax.bar(values - width / 4, maxs_unary, width / 2, alpha=0.3, color='C0')
         ax.bar(values - width / 4, mins_unary, width / 2, alpha=.75, color='C0', label='unary')
-        ax.plot(exact_values, exact_pdf, color='black')
+        ax.plot(exact_values, exact_pdf, color='black', label='PDF')
         ax.scatter(values - width / 4, means_unary, s=20, color='C0', marker='x', zorder=10)
         ax.scatter(values + width / 4, means_binary, s=20, color='C1', marker='x', zorder=10)
-        ax.scatter(values, pdf, s=1250, color='black', label='PDF', marker='_', zorder=9)
+        ax.scatter(values, pdf, s=1250, color='black', marker='_', zorder=9)
         plt.ylabel('Probability')
         plt.xlabel('Option price')
         # plt.title('Option price distribution for {} qubits - {} error: {} - qasm_simulator'.format(qu, err, (noise_objects[2])))
@@ -252,7 +255,7 @@ class errors:
                 probs = self.compute_save_outcomes_binary(bins, error_name, error, repeats,
                                                           measure_error=measure_error, thermal_error=thermal_error, shots=shots)
 
-            qc, dev, (values, pdf), (mu, mean, variance) = un.load_quantum_sim(bins, self.S0, self.sig, self.r, self.T)
+            qc, (values, pdf), (mu, mean, variance) = un.load_quantum_sim(bins, self.S0, self.sig, self.r, self.T)
             for j in range(probs.shape[1]):
                 divergences[i, j] = KL(probs[:, j], pdf)
 
@@ -273,7 +276,7 @@ class errors:
                 probs = self.compute_save_outcomes_unary(bins, error_name, error, repeats,
                                                           measure_error=measure_error, thermal_error=thermal_error, shots=shots)
 
-            qc, dev, (values, pdf), (mu, mean, variance) = un.load_quantum_sim(bins, self.S0, self.sig, self.r, self.T)
+            qc, (values, pdf), (mu, mean, variance) = un.load_quantum_sim(bins, self.S0, self.sig, self.r, self.T)
             for j in range(probs.shape[1]):
                 divergences[i, j] = KL(probs[:, j], pdf)
 
@@ -322,49 +325,47 @@ class errors:
 
         print(payoff_l, payoff_h, self.cl_payoff)
 
-    def test_unary_Q(self, qu):
+    def test_binary_Q(self, qu): # Ready to delete
+        print(qu)
         S0, sig, r, T, K = self.S0, self.sig, self.r, self.T, self.K
         iterations = 1
         iterations = int(iterations)
-        mu = (r - 0.5 * sig ** 2) * T + np.log(S0)  # Define all the parameters to be used in the computation
-        mean = np.exp(
-            mu + 0.5 * T * sig ** 2)  # Set the relevant zone of study and create the mapping between qubit and option price, and
-        # generate the target lognormal distribution within the interval
-        variance = (np.exp(T * sig ** 2) - 1) * np.exp(2 * mu + T * sig ** 2)
-        S = np.linspace(max(mean - 3 * np.sqrt(variance), 0), mean + 3 * np.sqrt(variance), qu)
-        ln = log_normal(S, mu, sig * np.sqrt(T))
-        lognormal_parameters = un.rw_parameters(qu,
-                                             ln)  # Solve for the parameters needed to create the target lognormal distribution
-        prob_loading = un.rw_circuit(qu,
-                                  lognormal_parameters)  # Build the probaility loading circuit with the adjusted parameters
-        prob_loading_inv = un.rw_circuit_inv(qu,
-                                  lognormal_parameters)
-        payoff = un.payoff_circuit(qu, K, S)
-        payoff_inv = un.payoff_circuit_inv(qu, K, S)
+        mu = ((r - 0.5 * sig ** 2) * T + np.log(S0))  # parameters for the log_normal distribution
+        sigma = sig * np.sqrt(T)
+        mean = np.exp(mu + sigma ** 2 / 2)
+        variance = (np.exp(sigma ** 2) - 1) * np.exp(2 * mu + sigma ** 2)
+        stddev = np.sqrt(variance)
 
-        diffusion = un.diffusion_operator(qu)
-        oracle = un.oracle_operator(qu)
+        # lowest and highest value considered for the spot price; in between, an equidistant discretization is considered.
+        low = np.maximum(0, mean - 3 * stddev)
+        high = mean + 3 * stddev
+        # S = np.linspace(low, high, samples)
 
-        qc = prob_loading + payoff
+        # construct circuit factory for uncertainty model
+        uncertainty_model = LogNormalDistribution(qu, mu=mu, sigma=sigma, low=low, high=high)
+
+        values = uncertainty_model.values
+        pdf = uncertainty_model.probabilities
+
+        qr = QuantumRegister(2 * qu + 2)
+        cr = ClassicalRegister(1)
+        qc = QuantumCircuit(qr, cr)
+        uncertainty_model.build(qc, qr)
+        bin.payoff_circuit(qc, qu, K, high, low, measure=False)
+        bin.oracle_operator(qc, qu)
+        bin.payoff_circuit_inv(qc, qu, K, high, low, measure=False)
+        uncertainty_model.build_inverse(qc, qr)
         job_payoff_sim = execute(qc, Aer.get_backend('statevector_simulator'))# Run the complete payoff expectation circuit through a simulator
-        statevector = job_payoff_sim.result().data()['statevector']
-        print('algorithm')
-        for i in range(qu):
-            print(statevector[2 ** i], statevector[2 ** qu + 2 ** i])
-
-        job_payoff_sim = execute(qc + diffusion, Aer.get_backend(
+        statevector_1 = job_payoff_sim.result().data()['statevector']
+        bin.diffusion_operator(qc, qu)
+        job_payoff_sim = execute(qc, Aer.get_backend(
             'statevector_simulator'))  # Run the complete payoff expectation circuit through a simulator
-        statevector = job_payoff_sim.result().data()['statevector']
-        print('diffusion')
-        for i in range(qu):
-            print(statevector[2 ** i], statevector[2 ** qu + 2 ** i])
+        statevector_2 = job_payoff_sim.result().data()['statevector']
+        print('algorithm')
+        for i, (s1, s2) in enumerate(zip(statevector_1, statevector_2)):
+            print(np.binary_repr(i, 2*qu+2), s1, s2)
 
-
-        '''qc_Q = oracle + payoff_inv + prob_loading_inv + diffusion + prob_loading + payoff
-        for i in range(iterations):
-            qc += qc_Q'''
-
-    def test_unary_mlae(self, bins, error_name, error_value, bin_error, measure_error=False, thermal_error=False, shots=100, mode='eis'):
+    def test_unary_mlae(self, bins, error_name, error_value, bin_error, measure_error=False, thermal_error=False, shots=100, mode='eis'): # Ready to delete
         mode = mode.lower()
         if 'lis' in mode:
             M = np.ceil(1 / bin_error)
@@ -390,9 +391,7 @@ class errors:
             ones, zeroes = un.run_Q_operator(qu, qc, shots, basis_gates, noise_model)
             print(np.sin((2 * i + 1) * theta) ** 2, ones / (ones + zeroes))
 
-
-
-    def unary_mlae(self, bins, error_name, error_value, bin_error, measure_error=False, thermal_error=False, shots=100, mode='eis'):
+    def test_binary_mlae(self, bins, error_name, error_value, bin_error, measure_error=False, thermal_error=False, shots=100, mode='eis'): # Ready to delete
         mode = mode.lower()
         if 'lis' in mode:
             M = np.ceil(1 / bin_error)
@@ -402,23 +401,261 @@ class errors:
             print(M)
             m_s = np.hstack((0, 2 ** np.arange(0, M)))
             print(m_s)
+        qu = int(np.log2(bins))
+        noise = self.select_error(error_name, measure_error=measure_error, thermal_error=thermal_error)
+        noise_model = noise(error_value, measure=measure_error, thermal=thermal_error)
+        basis_gates = noise_model.basis_gates
+        qc, (k, c, high, low) = bin.load_Q_operator(qu, 0, self.S0, self.sig, self.r, self.T, self.K)
+        print(qc.num_qubits)
+        ones, zeroes = bin.run_Q_operator(qc, shots, basis_gates, noise_model)
+
+        a = ones / (ones + zeroes)
+        theta = np.arcsin(np.sqrt(a))
+        i = 0
+        print(np.sin((2 * i + 1) * theta) ** 2, ones / (ones + zeroes))
+        for i in range(1, 10):
+            qc, r = bin.load_Q_operator(qu, i, self.S0, self.sig, self.r, self.T, self.K)
+
+            ones, zeroes = bin.run_Q_operator(qc, shots, basis_gates, noise_model)
+            print(np.sin((2 * i + 1) * theta) ** 2, ones / (ones + zeroes))
+
+
+
+    def unary_mlae(self, bins, error_name, error_value, M, measure_error=False, thermal_error=False, shots=100):
+        m_s = np.arange(0, M, 1)
         qu = bins
         noise = self.select_error(error_name, measure_error=measure_error, thermal_error=thermal_error)
         noise_model = noise(error_value, measure=measure_error, thermal=thermal_error)
         basis_gates = noise_model.basis_gates
 
-        a = un.MLAE(qu, self.data, m_s, shots, basis_gates, noise_model)
-        print('theta', np.arcsin(np.sqrt(a)))
-        print('a', a)
+        a_s, error_s = un.MLAE(qu, self.data, m_s, shots, basis_gates, noise_model)
 
         qc, S = un.load_payoff_quantum_sim(qu, self.S0, self.sig, self.r, self.T, self.K)
-        print(S, S[qu - 1])
-        a_exact = self.cl_payoff / (S[qu - 1] - self.K)
-        print('theta_exact', np.arcsin(np.sqrt(a_exact)))
-        print('a exact', a_exact)
-        payoff_qu = un.get_payoff_from_prob(a, qu, S, self.K)
+        payoff_qu = un.get_payoff_from_prob(a_s, qu, S, self.K)
+        print('last')
+        print(bin.diff_qu_cl(payoff_qu, self.cl_payoff), 100 * np.abs(error_s / self.cl_payoff))
 
-        print(a, payoff_qu, self.cl_payoff)
+    def binary_mlae(self, bins, error_name, error_value, M=4, measure_error=False, thermal_error=False, shots=100):
+        m_s = np.arange(0, M+1, 1)
+        qu = int(np.log2(bins))
+        noise = self.select_error(error_name, measure_error=measure_error, thermal_error=thermal_error)
+        noise_model = noise(error_value, measure=measure_error, thermal=thermal_error)
+        basis_gates = noise_model.basis_gates
+
+        a_s, error_s, (k, c, high, low) = bin.MLAE(qu, self.data, m_s, shots, basis_gates, noise_model)
+
+        #qc, S = bin.load_payoff_quantum_sim(qu, self.S0, self.sig, self.r, self.T, self.K)
+        payoff_qu = bin.get_payoff_from_prob(a_s, qu, c, k, high, low)
+        error_qu = bin.get_payoff_error_from_prob_error(error_s, qu, c, k, high, low)
+        # algo no funciona bien en este error_qu, ¿pero qué?
+        print(bin.diff_qu_cl(payoff_qu, self.cl_payoff), 100 * np.abs(error_qu / self.cl_payoff))
+
+    def compute_save_errors_binary_amplitude_estimation(self, bins, error_name, repeats, M=4, measure_error=False, thermal_error=False,
+                                   shots=100, u=0, error=0.05):
+        qubits = int(np.log2(bins))
+        error_name = self.change_name(error_name, measure_error, thermal_error)
+        noise = self.select_error(error_name, measure_error=measure_error, thermal_error=thermal_error)
+        m_s = np.arange(0, M + 1, 1)
+        (values, pdf) = bin.get_pdf(qubits, self.S0, self.sig, self.r, self.T)[1]
+        print(values, pdf)
+        c = (2 * error) ** (1 / (2 * u + 2))
+        k = int(np.floor(2 ** qubits * (self.K - np.min(values)) / (np.max(values) - np.min(values))))
+        print(k)
+        # payoff = np.sum((pdf * (values - self.K))[values >= self.K)])
+
+        optimal_prob = 1/2 - c + 2 * c * 2**qubits / (2**qubits - k) * np.sum((pdf * (values - values[k]))[values >= self.K])
+        # ((prob - 0.5 + c) * (2 ** qu - 1 - k) / 2 / c) * (high - low) / 2 ** qu
+
+        # El problema está aquí, este cálculo de optimal_prob no es el bueno, hay que afinarlo bien para que el benchmark sea justo
+        print(optimal_prob)
+        error_payoff = np.empty((len(m_s), self.steps, repeats))
+        confidence = np.empty_like(error_payoff)
+
+        for i, error in enumerate(self.error_steps):
+            print(error)
+            circuits = [[]]*len(m_s)
+            noise_model = noise(error, measure=measure_error, thermal=thermal_error)
+            basis_gates = noise_model.basis_gates
+            for j, m in enumerate(m_s):
+                qc = bin.load_Q_operator(qubits, m, self.S0, self.sig, self.r, self.T, self.K)[0]
+                circuits[j] = qc
+
+            for r in range(repeats):
+                ones_s = [[]]*len(m_s)
+                zeroes_s = [[]] * len(m_s)
+                for j, m in enumerate(m_s):
+                    ones, zeroes = bin.run_Q_operator(circuits[j], shots, basis_gates, noise_model)
+                    ones_s[j] = int(ones)
+                    zeroes_s[j] = int(zeroes)
+                theta = np.linspace(0, np.pi / 2)
+                theta_max_s, error_theta_s = max_likelihood(theta, m_s, ones_s, zeroes_s)
+                #print(theta_max_s, error_theta_s)
+                a_s, error_s = np.sin(theta_max_s) ** 2, np.abs(np.sin(2 * theta_max_s) * error_theta_s)
+                #print(a_s, error_s)
+                error_payoff[:, i, r] = 100 * (a_s - optimal_prob)
+                confidence[:, i, r] = 100 * (np.abs(error_s) / optimal_prob)
+
+        try:
+            os.makedirs(name_folder_data(self.data) + '/%s_bins/binary/amplitude_estimation' % bins)
+        except:
+            pass
+        for j, m in enumerate(m_s):
+            np.savetxt(name_folder_data(
+                self.data) + '/%s_bins/binary/amplitude_estimation/' % bins + error_name + '_gate(%s)_steps(%s)_repeats(%s)_M(%s).npz' % (
+                       self.max_gate_error, self.steps, repeats, m), error_payoff[j])
+            np.savetxt(name_folder_data(
+                self.data) + '/%s_bins/binary/amplitude_estimation/' % bins + error_name + '_gate(%s)_steps(%s)_repeats(%s)_M(%s)_confidence.npz' % (
+                       self.max_gate_error, self.steps, repeats, m), confidence[j])
+
+    def compute_save_errors_unary_amplitude_estimation(self, bins, error_name, repeats, M=4, measure_error=False, thermal_error=False,
+                                   shots=100):
+        qubits = int(bins)
+        error_name = self.change_name(error_name, measure_error, thermal_error)
+        noise = self.select_error(error_name, measure_error=measure_error, thermal_error=thermal_error)
+        m_s = np.arange(0, M + 1, 1)
+        (values, pdf), (mu, mean, variance)= un.get_pdf(qubits, self.S0, self.sig, self.r, self.T)
+
+        optimal_prob = np.sum(pdf[values >= self.K] * (values[values >= self.K] - self.K)) / (np.max(values) - self.K)
+        print(optimal_prob)
+        error_payoff = np.empty((len(m_s), self.steps, repeats))
+        confidence = np.empty_like(error_payoff)
+
+        for i, error in enumerate(self.error_steps):
+            print(error)
+            circuits = [[]]*len(m_s)
+            noise_model = noise(error, measure=measure_error, thermal=thermal_error)
+            basis_gates = noise_model.basis_gates
+            for j, m in enumerate(m_s):
+                qc = un.load_Q_operator(qubits, m, self.S0, self.sig, self.r, self.T, self.K)
+                circuits[j] = qc
+
+            for r in range(repeats):
+                ones_s = [[]]*len(m_s)
+                zeroes_s = [[]] * len(m_s)
+                for j, m in enumerate(m_s):
+                    ones, zeroes = un.run_Q_operator(circuits[j], shots, basis_gates, noise_model)
+                    ones_s[j] = int(ones)
+                    zeroes_s[j] = int(zeroes)
+                theta = np.linspace(0, np.pi / 2)
+                theta_max_s, error_theta_s = max_likelihood(theta, m_s, ones_s, zeroes_s)
+                #print(theta_max_s, error_theta_s)
+                a_s, error_s = np.sin(theta_max_s) ** 2, np.abs(np.sin(2 * theta_max_s) * error_theta_s)
+                #print(a_s, error_s)
+                error_payoff[:, i, r] = 100 * (a_s - optimal_prob)
+                confidence[:, i, r] = 100 * (np.abs(error_s) / optimal_prob)
+
+        try:
+            os.makedirs(name_folder_data(self.data) + '/%s_bins/unary/amplitude_estimation' % bins)
+        except:
+            pass
+        for j, m in enumerate(m_s):
+            np.savetxt(name_folder_data(
+                self.data) + '/%s_bins/unary/amplitude_estimation/' % bins + error_name + '_gate(%s)_steps(%s)_repeats(%s)_M(%s).npz' % (
+                       self.max_gate_error, self.steps, repeats, m), error_payoff[j])
+            np.savetxt(name_folder_data(
+                self.data) + '/%s_bins/unary/amplitude_estimation/' % bins + error_name + '_gate(%s)_steps(%s)_repeats(%s)_M(%s)_confidence.npz' % (
+                       self.max_gate_error, self.steps, repeats, m), confidence[j])
+
+    def paint_amplitude_estimation_unary(self, bins, error_name, repeats, M=4, measure_error=False, thermal_error=False):
+        error_name = self.change_name(error_name, measure_error, thermal_error)
+        #noise = self.select_error(error_name, measure_error=measure_error, thermal_error=thermal_error)
+        m_s = np.arange(0, M + 1, 1)
+        valids = np.empty((M+1, self.steps))
+        fig_0, ax_0 = plt.subplots()
+        fig_1, ax_1 = plt.subplots()
+        fig_2, ax_2 = plt.subplots()
+        ############ Unary
+        for j, m in enumerate(m_s):
+            error_payoff = np.loadtxt(name_folder_data(
+                self.data) + '/%s_bins/unary/amplitude_estimation/' % bins + error_name + '_gate(%s)_steps(%s)_repeats(%s)_M(%s).npz' % (
+                       self.max_gate_error, self.steps, repeats, m))
+            confidences= np.loadtxt(name_folder_data(
+                self.data) + '/%s_bins/unary/amplitude_estimation/' % bins + error_name + '_gate(%s)_steps(%s)_repeats(%s)_M(%s)_confidence.npz' % (
+                                             self.max_gate_error, self.steps, repeats, m))
+
+            data = np.empty((self.steps, 2))
+            conf = np.empty((self.steps, 2))
+            for _ in range(self.steps):
+                data[_], conf[_], valids[j, _] = experimental_data(error_payoff[_], confidences[_])
+
+            print(data[:, 0])
+            ax_0.scatter(self.error_steps, data[:,0], color='C%s' % j, label=r'M=%s' % m, marker='x')
+            ax_0.fill_between(self.error_steps, data[:,0] - data[:, 1], data[:,0] + data[:, 1], color='C%s' % j, alpha=0.3)
+
+            ax_1.scatter(self.error_steps, conf[:, 0], color='C%s' % j, label=r'M=%s' % m, marker='x')
+            ax_1.fill_between(self.error_steps, conf[:, 0] - conf[:, 1], conf[:, 0] + conf[:, 1], color='C%s' % j,
+                               alpha=0.3)
+
+        ax_0.legend()
+        ax_1.legend()
+        fig_0.savefig(name_folder_data(
+                self.data) + '/%s_bins/unary/amplitude_estimation/' % bins + error_name + '_gate(%s)_steps(%s)_repeats(%s)_data.pdf' % (
+                            self.max_gate_error, self.steps, repeats))
+        fig_1.savefig(name_folder_data(
+            self.data) + '/%s_bins/unary/amplitude_estimation/' % bins + error_name + '_gate(%s)_steps(%s)_repeats(%s)_sample_error.pdf' % (
+                          self.max_gate_error, self.steps, repeats))
+
+        cmap = plt.get_cmap('Greys')
+        colors.Normalize(vmin=0., vmax=1.)
+
+        hist = ax_2.imshow(valids / np.max(valids), cmap=cmap)
+        ax_2.set(xticks=np.arange(self.steps), xticklabels = np.round(1000 * self.error_steps, 1), xlabel = r'$ \times 10^3$ Gate error',
+                 yticks=np.arange(M + 1), yticklabels = np.arange(M + 1), ylabel='AE iterations')
+        plt.colorbar(hist)
+        fig_2.savefig(name_folder_data(
+            self.data) + '/%s_bins/unary/amplitude_estimation/' % bins + error_name + '_gate(%s)_steps(%s)_repeats(%s)_sample_valids.pdf' % (
+                          self.max_gate_error, self.steps, repeats))
+
+    def paint_amplitude_estimation_binary(self, bins, error_name, repeats, M=4, measure_error=False,
+                                         thermal_error=False):
+        error_name = self.change_name(error_name, measure_error, thermal_error)
+        #noise = self.select_error(error_name, measure_error=measure_error, thermal_error=thermal_error)
+        m_s = np.arange(0, M + 1, 1)
+        valids = np.empty((M+1, self.steps))
+        fig_0, ax_0 = plt.subplots()
+        fig_1, ax_1 = plt.subplots()
+        fig_2, ax_2 = plt.subplots()
+        ############ Binary
+        for j, m in enumerate(m_s):
+            error_payoff = np.loadtxt(name_folder_data(
+                self.data) + '/%s_bins/binary/amplitude_estimation/' % bins + error_name + '_gate(%s)_steps(%s)_repeats(%s)_M(%s).npz' % (
+                       self.max_gate_error, self.steps, repeats, m))
+            confidences= np.loadtxt(name_folder_data(
+                self.data) + '/%s_bins/binary/amplitude_estimation/' % bins + error_name + '_gate(%s)_steps(%s)_repeats(%s)_M(%s)_confidence.npz' % (
+                                             self.max_gate_error, self.steps, repeats, m))
+
+            data = np.empty((self.steps, 2))
+            conf = np.empty((self.steps, 2))
+            for _ in range(self.steps):
+                data[_], conf[_], valids[j, _] = experimental_data(error_payoff[_], confidences[_])
+
+            print(data[:, 0])
+            ax_0.scatter(self.error_steps, data[:,0], color='C%s' % j, label=r'M=%s' % m, marker='x')
+            ax_0.fill_between(self.error_steps, data[:,0] - data[:, 1], data[:,0] + data[:, 1], color='C%s' % j, alpha=0.3)
+
+            ax_1.scatter(self.error_steps, conf[:, 0], color='C%s' % j, label=r'M=%s' % m, marker='x')
+            ax_1.fill_between(self.error_steps, conf[:, 0] - conf[:, 1], conf[:, 0] + conf[:, 1], color='C%s' % j,
+                               alpha=0.3)
+
+        ax_0.legend()
+        ax_1.legend()
+        fig_0.savefig(name_folder_data(
+                self.data) + '/%s_bins/binary/amplitude_estimation/' % bins + error_name + '_gate(%s)_steps(%s)_repeats(%s)_data.pdf' % (
+                            self.max_gate_error, self.steps, repeats))
+        fig_1.savefig(name_folder_data(
+            self.data) + '/%s_bins/binary/amplitude_estimation/' % bins + error_name + '_gate(%s)_steps(%s)_repeats(%s)_sample_error.pdf' % (
+                          self.max_gate_error, self.steps, repeats))
+
+        cmap = plt.get_cmap('Greys')
+        colors.Normalize(vmin=0., vmax=1.)
+
+        hist = ax_2.imshow(valids / np.max(valids), cmap=cmap)
+        ax_2.set(xticks=np.arange(self.steps), xticklabels = np.round(1000 * self.error_steps, 1), xlabel = r'$ \times 10^3$ Gate error',
+                 yticks=np.arange(M + 1), yticklabels = np.arange(M + 1), ylabel='AE iterations')
+        plt.colorbar(hist)
+        fig_2.savefig(name_folder_data(
+            self.data) + '/%s_bins/binary/amplitude_estimation/' % bins + error_name + '_gate(%s)_steps(%s)_repeats(%s)_sample_valids.pdf' % (
+                          self.max_gate_error, self.steps, repeats))
 
 
 

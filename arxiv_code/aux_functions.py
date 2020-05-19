@@ -79,4 +79,100 @@ def chernoff(m, c):
     return m_min, m_max
 
 def bound(delta, mu, constant):
-    return np.power((np.exp(delta))/(1 + delta)**(1+delta), mu) - constant
+    return np.power((np.exp(delta))/(1 + delta)**(1 + delta), mu) - constant
+
+
+def max_likelihood(theta, m_s, ones_s, zeroes_s, f = .1, spread=.1):
+    if len(m_s) != len(ones_s) or len(m_s) != len(zeroes_s):
+        raise ValueError('Dimension mismatch')
+    length=len(theta)
+    L = 1
+    theta_max_s = np.zeros(len(m_s))
+    theta_max_s.fill(np.nan)
+    error_s = np.zeros(len(m_s))
+    error_s.fill(np.nan)
+    for i in range(len(m_s)):
+        # print(m_s[i], ones_s[i], zeroes_s[i])
+        L *= (np.sin((2 * m_s[i] + 1) * theta)**(2))**ones_s[i]
+        L *= (np.cos((2 * m_s[i] + 1) * theta)**(2))**zeroes_s[i]
+        L = L / np.max(L)
+        # L = L ** (sms[i])
+        #plt.plot(theta, L, c='C1')
+        #plt.show()
+
+        arg_max = np.argmax(L)
+        if arg_max == 0 or arg_max == len(theta) - 1:
+            break
+        max_L = np.max(L)
+        value_plus = 1
+        j_plus=0
+        while value_plus > f:
+            j_plus += 1
+            try:
+                value_plus = L[arg_max + j_plus]
+            except:
+                j_plus = length
+                break
+
+        value_minus = 1
+        j_minus = 0
+        while value_minus > max_L * f:
+            j_minus -= 1
+            try:
+                value_minus = L[arg_max + j_minus]
+            except:
+                j_minus = -length
+                break
+
+        try:
+            arg_plus = theta[arg_max + j_plus]
+            arg_minus = theta[arg_max + j_minus]
+
+        except:
+            if j_plus == length:
+                arg_minus = theta[arg_max + j_minus]
+                arg_plus = 2 * np.max(theta) - arg_minus
+            elif j_minus == -length:
+                arg_plus = theta[arg_max + j_plus]
+                arg_minus = 2 * np.min(theta) - arg_plus
+            else:
+                print('failed')
+
+        l = arg_plus - arg_minus
+        theta = np.linspace(arg_minus - spread * l, arg_plus + spread * l, length)
+        #print(arg_minus, arg_plus)
+        L=1
+        L *= (np.sin((2 * m_s[i] + 1) * theta) ** (2)) ** ones_s[i]
+        L *= (np.cos((2 * m_s[i] + 1) * theta) ** (2)) ** zeroes_s[i]
+        L = L / np.max(L)
+        #plt.plot(theta, L)
+        #plt.show()
+        theta_max_s[i] = theta[arg_max]
+        error_s[i] = l
+
+    # print(theta_max_s, error_s)
+    return theta_max_s, error_s
+
+def detect_sign(array):
+    asign = np.sign(array)
+    signchange = ((np.roll(asign, 1) - asign) != 0).astype(int)
+    signchange[0]=0
+    return signchange
+
+def experimental_data(data, conf):
+    bool_index = ~np.isnan(data)
+    valids = np.sum(bool_index)
+    if valids == 0:
+        data_mean = np.nan
+        data_std = np.nan
+        conf_mean = np.nan
+        conf_std = np.nan
+    else:
+        data_mean = np.nanmean(data)
+        data_std = np.nanstd(data)
+        conf_mean = np.nanmean(conf)
+        conf_std = np.nanstd(conf)
+
+
+    # print((data_mean, data_std), (conf_mean, conf_std), np.sum(bool_index))
+    return (data_mean, data_std), (conf_mean, conf_std), np.sum(bool_index)
