@@ -5,7 +5,7 @@ import unary as un
 S0 = 2
 K = 1.9
 sig = 0.4
-r = 0.0501
+r = 0.05
 T = 0.1
 data = (S0, sig, r, T, K)
 
@@ -33,10 +33,11 @@ Err.paint_outcomes(bins, error_name, max_error_gate, repeats, measure_error=meas
 print('paint divergences')
 
 Err.paint_divergences(bins, error_name, repeats, measure_error=measure, thermal_error=thermal)'''
-Err.compute_save_errors_unary_amplitude_estimation(bins, error_name, repeats, shots=1000)
-Err.compute_save_errors_binary_amplitude_estimation(bins, error_name, repeats, shots=1000)
-Err.paint_amplitude_estimation_binary(bins, error_name, repeats)
-Err.paint_amplitude_estimation_unary(bins, error_name, repeats)
+#Err.compute_save_errors_unary_amplitude_estimation(bins, error_name, repeats)
+#Err.compute_save_errors_binary_amplitude_estimation(bins, error_name, repeats)
+Err.error_emplitude_estimation(bins, error_name, repeats)
+Err.paint_amplitude_estimation_binary(bins, error_name, repeats, M=2)
+Err.paint_amplitude_estimation_unary(bins, error_name, repeats, M=2)
 #Err.compute_save_errors_binary(bins, error_name, repeats)
 #Err.unary_mlae(bins, error_name, error_value, bin_error)
 #Err.test_binary_Q(6)

@@ -460,7 +460,7 @@ def diff_qu_cl(qu_payoff_sim, cl_payoff):
     :param cl_payoff: classical payoff
     :return: Relative error
     """
-    error = (100 * (qu_payoff_sim - cl_payoff) / cl_payoff)
+    error = (100 * np.abs(qu_payoff_sim - cl_payoff) / cl_payoff)
 
     return error
 

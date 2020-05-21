@@ -451,7 +451,7 @@ class errors:
         print(bin.diff_qu_cl(payoff_qu, self.cl_payoff), 100 * np.abs(error_qu / self.cl_payoff))
 
     def compute_save_errors_binary_amplitude_estimation(self, bins, error_name, repeats, M=4, measure_error=False, thermal_error=False,
-                                   shots=100, u=0, error=0.05):
+                                   shots=500, u=0, error=0.05):
         qubits = int(np.log2(bins))
         error_name = self.change_name(error_name, measure_error, thermal_error)
         noise = self.select_error(error_name, measure_error=measure_error, thermal_error=thermal_error)
@@ -465,9 +465,8 @@ class errors:
 
         optimal_prob = 1/2 - c + 2 * c * 2**qubits / (2**qubits - k) * np.sum((pdf * (values - values[k]))[values >= self.K])
         # ((prob - 0.5 + c) * (2 ** qu - 1 - k) / 2 / c) * (high - low) / 2 ** qu
+        # Podría tomarse como optimal prob el último resultado con el circuito sin errores
 
-        # El problema está aquí, este cálculo de optimal_prob no es el bueno, hay que afinarlo bien para que el benchmark sea justo
-        print(optimal_prob)
         error_payoff = np.empty((len(m_s), self.steps, repeats))
         confidence = np.empty_like(error_payoff)
 
@@ -492,8 +491,8 @@ class errors:
                 #print(theta_max_s, error_theta_s)
                 a_s, error_s = np.sin(theta_max_s) ** 2, np.abs(np.sin(2 * theta_max_s) * error_theta_s)
                 #print(a_s, error_s)
-                error_payoff[:, i, r] = 100 * (a_s - optimal_prob)
-                confidence[:, i, r] = 100 * (np.abs(error_s) / optimal_prob)
+                error_payoff[:, i, r] = a_s
+                confidence[:, i, r] =np.abs(error_s) / 2
 
         try:
             os.makedirs(name_folder_data(self.data) + '/%s_bins/binary/amplitude_estimation' % bins)
@@ -508,7 +507,7 @@ class errors:
                        self.max_gate_error, self.steps, repeats, m), confidence[j])
 
     def compute_save_errors_unary_amplitude_estimation(self, bins, error_name, repeats, M=4, measure_error=False, thermal_error=False,
-                                   shots=100):
+                                   shots=500):
         qubits = int(bins)
         error_name = self.change_name(error_name, measure_error, thermal_error)
         noise = self.select_error(error_name, measure_error=measure_error, thermal_error=thermal_error)
@@ -516,7 +515,7 @@ class errors:
         (values, pdf), (mu, mean, variance)= un.get_pdf(qubits, self.S0, self.sig, self.r, self.T)
 
         optimal_prob = np.sum(pdf[values >= self.K] * (values[values >= self.K] - self.K)) / (np.max(values) - self.K)
-        print(optimal_prob)
+        #print(np.sqrt(np.arcsin(optimal_prob)))
         error_payoff = np.empty((len(m_s), self.steps, repeats))
         confidence = np.empty_like(error_payoff)
 
@@ -541,8 +540,8 @@ class errors:
                 #print(theta_max_s, error_theta_s)
                 a_s, error_s = np.sin(theta_max_s) ** 2, np.abs(np.sin(2 * theta_max_s) * error_theta_s)
                 #print(a_s, error_s)
-                error_payoff[:, i, r] = 100 * (a_s - optimal_prob)
-                confidence[:, i, r] = 100 * (np.abs(error_s) / optimal_prob)
+                error_payoff[:, i, r] = a_s
+                confidence[:, i, r] = np.abs(error_s) / 2
 
         try:
             os.makedirs(name_folder_data(self.data) + '/%s_bins/unary/amplitude_estimation' % bins)
@@ -556,38 +555,120 @@ class errors:
                 self.data) + '/%s_bins/unary/amplitude_estimation/' % bins + error_name + '_gate(%s)_steps(%s)_repeats(%s)_M(%s)_confidence.npz' % (
                        self.max_gate_error, self.steps, repeats, m), confidence[j])
 
+    def error_emplitude_estimation(self, bins, error_name, repeats, M=4, measure_error=False, thermal_error=False, error=0.05, u=0):
+
+        (values, pdf), (mu, mean, variance) = un.get_pdf(bins, self.S0, self.sig, self.r, self.T)
+        a_un = np.sum(pdf[values >= self.K] * (values[values >= self.K] - self.K)) / (np.max(values) - self.K)
+        print(a_un)
+
+        (values, pdf) = bin.get_pdf(int(np.log2(bins)), self.S0, self.sig, self.r, self.T)[1]
+        c = (2 * error) ** (1 / (2 * u + 2))
+        k = (2 ** int(np.log2(bins)) * (self.K - np.min(values)) / (np.max(values) - np.min(values)))
+        # a_bin = 1/2 - c + 2 * c * 2**int(np.log2(bins)) / (2**int(np.log2(bins)) - k) * np.sum((pdf * (values - self.K))[values >= self.K])
+        a_bin = 0.308
+
+        fig, ax = plt.subplots()
+        un_data = np.empty(M+1)
+        un_conf = np.empty(M + 1)
+        bin_data = np.empty(M + 1)
+        bin_conf = np.empty(M + 1)
+        for m in range(M+1):
+            un_data_ = np.loadtxt(name_folder_data(
+                    self.data) + '/%s_bins/unary/amplitude_estimation/' % bins + error_name + '_gate(%s)_steps(%s)_repeats(%s)_M(%s).npz' % (
+                           self.max_gate_error, self.steps, repeats, m))[0]
+            un_conf_ = np.loadtxt(name_folder_data(
+                self.data) + '/%s_bins/unary/amplitude_estimation/' % bins + error_name + '_gate(%s)_steps(%s)_repeats(%s)_M(%s)_confidence.npz' % (
+                                      self.max_gate_error, self.steps, repeats, m))[0]
+            bin_data_ = np.loadtxt(name_folder_data(
+                self.data) + '/%s_bins/binary/amplitude_estimation/' % bins + error_name + '_gate(%s)_steps(%s)_repeats(%s)_M(%s).npz' % (
+                                     self.max_gate_error, self.steps, repeats, m))[0]
+            bin_conf_ = np.loadtxt(name_folder_data(
+                self.data) + '/%s_bins/binary/amplitude_estimation/' % bins + error_name + '_gate(%s)_steps(%s)_repeats(%s)_M(%s)_confidence.npz' % (
+                                       self.max_gate_error, self.steps, repeats, m))[0]
+
+            un_data[m], un_conf[m] = errors_experiment(un_data_, un_conf_)
+            bin_data[m], bin_conf[m] = errors_experiment(bin_data_, bin_conf_)
+
+        ax.scatter(np.arange(M+1), un_data, c='C0', marker='x', label='unary', zorder=10)
+        ax.fill_between(np.arange(M+1), un_data - un_conf, un_data + un_conf, color='C0', alpha=0.3)
+        ax.plot([0, M], [a_un, a_un], c='blue', ls='--')
+        #ax.text(.5, a_un * (1.05), r'Optimal $a$ - unary')
+
+        ax.scatter(np.arange(M + 1), bin_data, c='C1', marker='+', label='binary', zorder=10)
+        ax.fill_between(np.arange(M + 1), bin_data - bin_conf, bin_data + bin_conf, color='C1', alpha=0.3, zorder=10)
+        ax.plot([0, M], [a_bin, a_bin], c='orangered', ls='--')
+        #ax.text(.5, a_bin * (0.95), r'Optimal $a$ - binary')
+        ax.set(xlabel='AE iterations', ylabel=r'$a$', xticks=np.arange(0, M + 1), xticklabels=np.arange(0, M + 1))
+
+        fig.savefig(name_folder_data(
+            self.data) + '/%s_bins/' % bins + error_name + '_amplitude_estimation_perfect_circuit_results.pdf')
+
+        un_error = np.abs(un_data - a_un)
+        bin_error = np.abs(bin_data - a_bin)
+
+        fig, bx = plt.subplots()
+        bx.errorbar(np.arange(M + 1) + 0.1, un_error, un_conf, c='blue', alpha=0.7, capsize=10, ls=' ')
+        bx.scatter(np.arange(M + 1) + 0.1, un_error, c='C0', label='unary', marker='x', zorder=3, s=100)
+        bx.errorbar(np.arange(M + 1) - 0.1, bin_error, bin_conf, c='orangered', alpha=0.7, capsize=10, ls=' ')
+        bx.scatter(np.arange(M + 1) - 0.1, bin_error, c='C1', label='binary', marker='+', zorder=3, s=100)
+
+        shots=500
+        error_bound = 1 / np.sqrt(shots * np.cumsum(1 + 2 * np.cumsum(np.arange(M+1))))
+
+        bx.plot(np.arange(M + 1), error_bound, c='black', label='Classical sampling')
+        bx.set(xlabel='AE iterations', xticks=np.arange(0, M+1), xticklabels=np.arange(0, M+1),
+               ylabel=r'$\Delta a $', ylim=[0.0001,0.05])
+        plt.yscale('log')
+        bx.legend()
+
+        fig.savefig(name_folder_data(
+                self.data) + '/%s_bins/' % bins + error_name + '_amplitude_estimation_perfect_circuit_error.pdf')
+
+
+
     def paint_amplitude_estimation_unary(self, bins, error_name, repeats, M=4, measure_error=False, thermal_error=False):
+        (values, pdf), (mu, mean, variance) = un.get_pdf(bins, self.S0, self.sig, self.r, self.T)
+        a_un = np.sum(pdf[values >= self.K] * (values[values >= self.K] - self.K)) / (np.max(values) - self.K)
         error_name = self.change_name(error_name, measure_error, thermal_error)
         #noise = self.select_error(error_name, measure_error=measure_error, thermal_error=thermal_error)
         m_s = np.arange(0, M + 1, 1)
         valids = np.empty((M+1, self.steps))
         fig_0, ax_0 = plt.subplots()
         fig_1, ax_1 = plt.subplots()
-        fig_2, ax_2 = plt.subplots()
+        fig_2, ax_2 = plt.subplots(figsize=(10,4))
         ############ Unary
         for j, m in enumerate(m_s):
-            error_payoff = np.loadtxt(name_folder_data(
+            a = np.loadtxt(name_folder_data(
                 self.data) + '/%s_bins/unary/amplitude_estimation/' % bins + error_name + '_gate(%s)_steps(%s)_repeats(%s)_M(%s).npz' % (
-                       self.max_gate_error, self.steps, repeats, m))
+                       self.max_gate_error, self.steps, repeats, m+2))
             confidences= np.loadtxt(name_folder_data(
                 self.data) + '/%s_bins/unary/amplitude_estimation/' % bins + error_name + '_gate(%s)_steps(%s)_repeats(%s)_M(%s)_confidence.npz' % (
-                                             self.max_gate_error, self.steps, repeats, m))
+                                             self.max_gate_error, self.steps, repeats, m+2))
 
             data = np.empty((self.steps, 2))
             conf = np.empty((self.steps, 2))
             for _ in range(self.steps):
-                data[_], conf[_], valids[j, _] = experimental_data(error_payoff[_], confidences[_])
+                data[_], conf[_], valids[j, _] = experimental_data(np.abs(a[_] - a_un), confidences[_])
 
-            print(data[:, 0])
-            ax_0.scatter(self.error_steps, data[:,0], color='C%s' % j, label=r'M=%s' % m, marker='x')
-            ax_0.fill_between(self.error_steps, data[:,0] - data[:, 1], data[:,0] + data[:, 1], color='C%s' % j, alpha=0.3)
+            ax_0.scatter(100*self.error_steps, 100*data[:,0], color='C%s' % (2+j), label=r'M=%s' % m, marker='x')
+            ax_0.fill_between(100*self.error_steps, 100*(data[:,0] - data[:, 1]), 100*(data[:,0] + data[:, 1]), color='C%s' % (2+j), alpha=0.3)
 
-            ax_1.scatter(self.error_steps, conf[:, 0], color='C%s' % j, label=r'M=%s' % m, marker='x')
-            ax_1.fill_between(self.error_steps, conf[:, 0] - conf[:, 1], conf[:, 0] + conf[:, 1], color='C%s' % j,
-                               alpha=0.3)
 
-        ax_0.legend()
+            ax_1.errorbar(100*self.error_steps, conf[:, 0], yerr=conf[:, 1], color='C%s' % (2 + j), alpha=0.7, capsize=10, ls=' ')
+            ax_1.scatter(100*self.error_steps, conf[:, 0], color='C%s' % (2 + j), marker='x', zorder=3, s=100, label=r'M=%s' % m)
+            #ax_1.errorbar(self.error_steps, conf[:, 0], yerr = conf[:, 1], color='C%s' % j, label=r'M=%s' % m, marker='x')
+
+
+            '''ax_1.scatter(self.error_steps, conf[:, 0], color='C%s' % j, label=r'M=%s' % m, marker='x', zorder=10)
+            ax_1.bar(self.error_steps, conf[:, 0] + conf[:, 1], width=self.max_gate_error / self.steps, color='C%s' % j, alpha=0.3, zorder=j)
+            ax_1.bar(self.error_steps, conf[:, 0] - conf[:, 1], width=self.max_gate_error / self.steps, color='C%s' % j, alpha=0.7, zorder=j)'''
+
+        ax_0.set(xlabel='single-qubit gate error (%)', ylabel='percentage off optimal $a$ (%)', ylim=[0, 8])
+        ax_1.set(xlabel='single-qubit gate error (%)', ylabel='$\Delta a$', ylim=[0.001, 0.1], yscale='log')
+        ax_0.legend(loc='upper left')
         ax_1.legend()
+        fig_0.tight_layout()
+        fig_1.tight_layout()
         fig_0.savefig(name_folder_data(
                 self.data) + '/%s_bins/unary/amplitude_estimation/' % bins + error_name + '_gate(%s)_steps(%s)_repeats(%s)_data.pdf' % (
                             self.max_gate_error, self.steps, repeats))
@@ -595,29 +676,38 @@ class errors:
             self.data) + '/%s_bins/unary/amplitude_estimation/' % bins + error_name + '_gate(%s)_steps(%s)_repeats(%s)_sample_error.pdf' % (
                           self.max_gate_error, self.steps, repeats))
 
+        norm = colors.Normalize(vmin=0., vmax=1.)
         cmap = plt.get_cmap('Greys')
-        colors.Normalize(vmin=0., vmax=1.)
 
-        hist = ax_2.imshow(valids / np.max(valids), cmap=cmap)
-        ax_2.set(xticks=np.arange(self.steps), xticklabels = np.round(1000 * self.error_steps, 1), xlabel = r'$ \times 10^3$ Gate error',
+
+        hist = ax_2.imshow(valids / np.max(valids), cmap=cmap, norm=norm)
+        ax_2.set(xticks=np.arange(0, self.steps+1, 2), xticklabels = np.round(100*self.max_gate_error * np.arange(0, self.steps+1, 2) / (self.steps-1), 2),
+                 xlabel = 'single-qubit gate error (%)',
                  yticks=np.arange(M + 1), yticklabels = np.arange(M + 1), ylabel='AE iterations')
-        plt.colorbar(hist)
+        plt.colorbar(hist, orientation='horizontal', fraction=.15)
+        fig_2.tight_layout()
         fig_2.savefig(name_folder_data(
             self.data) + '/%s_bins/unary/amplitude_estimation/' % bins + error_name + '_gate(%s)_steps(%s)_repeats(%s)_sample_valids.pdf' % (
                           self.max_gate_error, self.steps, repeats))
 
     def paint_amplitude_estimation_binary(self, bins, error_name, repeats, M=4, measure_error=False,
-                                         thermal_error=False):
+                                         thermal_error=False, error=0.05, u=0):
+
+        (values, pdf) = bin.get_pdf(int(np.log2(bins)), self.S0, self.sig, self.r, self.T)[1]
+        c = (2 * error) ** (1 / (2 * u + 2))
+        k = (2 ** int(np.log2(bins)) * (self.K - np.min(values)) / (np.max(values) - np.min(values)))
+        # a_bin = 1/2 - c + 2 * c * 2**int(np.log2(bins)) / (2**int(np.log2(bins)) - k) * np.sum((pdf * (values - self.K))[values >= self.K])
+        a_bin = 0.308
         error_name = self.change_name(error_name, measure_error, thermal_error)
         #noise = self.select_error(error_name, measure_error=measure_error, thermal_error=thermal_error)
         m_s = np.arange(0, M + 1, 1)
         valids = np.empty((M+1, self.steps))
         fig_0, ax_0 = plt.subplots()
         fig_1, ax_1 = plt.subplots()
-        fig_2, ax_2 = plt.subplots()
+        fig_2, ax_2 = plt.subplots(figsize=(10,4))
         ############ Binary
         for j, m in enumerate(m_s):
-            error_payoff = np.loadtxt(name_folder_data(
+            a = np.loadtxt(name_folder_data(
                 self.data) + '/%s_bins/binary/amplitude_estimation/' % bins + error_name + '_gate(%s)_steps(%s)_repeats(%s)_M(%s).npz' % (
                        self.max_gate_error, self.steps, repeats, m))
             confidences= np.loadtxt(name_folder_data(
@@ -627,18 +717,24 @@ class errors:
             data = np.empty((self.steps, 2))
             conf = np.empty((self.steps, 2))
             for _ in range(self.steps):
-                data[_], conf[_], valids[j, _] = experimental_data(error_payoff[_], confidences[_])
+                data[_], conf[_], valids[j, _] = experimental_data(np.abs(a[_] - a_bin), confidences[_])
 
-            print(data[:, 0])
-            ax_0.scatter(self.error_steps, data[:,0], color='C%s' % j, label=r'M=%s' % m, marker='x')
-            ax_0.fill_between(self.error_steps, data[:,0] - data[:, 1], data[:,0] + data[:, 1], color='C%s' % j, alpha=0.3)
+            ax_0.scatter(100*self.error_steps, 100*data[:,0], color='C%s' % (2+j), label=r'M=%s' % m, marker='x')
+            ax_0.fill_between(100*self.error_steps, 100*(data[:,0] - data[:, 1]), 100*(data[:,0] + data[:, 1]), color='C%s' % (2+j), alpha=0.3)
 
-            ax_1.scatter(self.error_steps, conf[:, 0], color='C%s' % j, label=r'M=%s' % m, marker='x')
-            ax_1.fill_between(self.error_steps, conf[:, 0] - conf[:, 1], conf[:, 0] + conf[:, 1], color='C%s' % j,
-                               alpha=0.3)
+            #ax_0.plot([self.error_steps[0], self.error_steps[-1]], [a_bin, a_bin], color='black', ls='--', zorder=10)
 
-        ax_0.legend()
+            ax_1.errorbar(100*self.error_steps, conf[:, 0], yerr=conf[:, 1], color='C%s' % (2 + j), alpha=0.7, capsize=10,
+                          ls=' ')
+            ax_1.scatter(100*self.error_steps, conf[:, 0], color='C%s' % (2 + j), marker='x', zorder=3, s=100,
+                         label=r'M=%s' % m)
+
+        ax_0.set(xlabel='single-qubit gate error (%)', ylabel='percentage off optimal $a$ (%)', ylim=[0, 20])
+        ax_1.set(xlabel='single-qubit gate error (%)', ylabel='$\Delta a$', ylim=[0.001, 0.1], yscale='log')
+        ax_0.legend(loc='upper left')
         ax_1.legend()
+        fig_0.tight_layout()
+        fig_1.tight_layout()
         fig_0.savefig(name_folder_data(
                 self.data) + '/%s_bins/binary/amplitude_estimation/' % bins + error_name + '_gate(%s)_steps(%s)_repeats(%s)_data.pdf' % (
                             self.max_gate_error, self.steps, repeats))
@@ -647,12 +743,14 @@ class errors:
                           self.max_gate_error, self.steps, repeats))
 
         cmap = plt.get_cmap('Greys')
-        colors.Normalize(vmin=0., vmax=1.)
+        norm = colors.Normalize(vmin=0., vmax=1.)
 
-        hist = ax_2.imshow(valids / np.max(valids), cmap=cmap)
-        ax_2.set(xticks=np.arange(self.steps), xticklabels = np.round(1000 * self.error_steps, 1), xlabel = r'$ \times 10^3$ Gate error',
+        hist = ax_2.imshow(valids / np.max(valids), cmap=cmap, norm=norm)
+        ax_2.set(xticks=np.arange(0, self.steps+1, 2), xticklabels = np.round(100*self.max_gate_error * np.arange(0, self.steps+1, 2) / (self.steps-1), 2),
+                 xlabel = 'single-qubit gate error (%) ',
                  yticks=np.arange(M + 1), yticklabels = np.arange(M + 1), ylabel='AE iterations')
-        plt.colorbar(hist)
+        plt.colorbar(hist, orientation='horizontal', fraction=.15)
+        fig_2.tight_layout()
         fig_2.savefig(name_folder_data(
             self.data) + '/%s_bins/binary/amplitude_estimation/' % bins + error_name + '_gate(%s)_steps(%s)_repeats(%s)_sample_valids.pdf' % (
                           self.max_gate_error, self.steps, repeats))

@@ -138,6 +138,9 @@ def max_likelihood(theta, m_s, ones_s, zeroes_s, f = .1, spread=.1):
             else:
                 print('failed')
 
+        arg_plus, arg_minus = max(arg_plus, arg_minus), min(arg_plus, arg_minus)
+        arg_minus=max(arg_minus, 0)
+        arg_plus = min(arg_plus, np.pi / 2)
         l = arg_plus - arg_minus
         theta = np.linspace(arg_minus - spread * l, arg_plus + spread * l, length)
         #print(arg_minus, arg_plus)
@@ -162,17 +165,36 @@ def detect_sign(array):
 def experimental_data(data, conf):
     bool_index = ~np.isnan(data)
     valids = np.sum(bool_index)
+    data = data[bool_index]
+    conf = conf[bool_index]
     if valids == 0:
         data_mean = np.nan
         data_std = np.nan
         conf_mean = np.nan
         conf_std = np.nan
     else:
-        data_mean = np.nanmean(data)
-        data_std = np.nanstd(data)
-        conf_mean = np.nanmean(conf)
-        conf_std = np.nanstd(conf)
+        data_mean = np.mean(data)
+        data_std = np.std(data)
+        conf_mean = np.mean(conf)
+        conf_std = np.std(conf)
 
 
     # print((data_mean, data_std), (conf_mean, conf_std), np.sum(bool_index))
-    return (data_mean, data_std), (conf_mean, conf_std), np.sum(bool_index)
+    # return (data_mean, data_std), (conf_mean, conf_std), np.sum(bool_index)
+    return errors_experiment(data, conf), (conf_mean, conf_std), np.sum(bool_index)
+
+def errors_experiment(data, conf):
+    bool_index = ~np.isnan(data)
+    valids = np.sum(bool_index)
+    data = data[bool_index]
+    conf = conf[bool_index]
+    if valids == 0:
+        mean = np.nan
+        error = np.nan
+    else:
+        mean = np.sum(data / conf ** 2) / np.sum(1 / conf ** 2)
+        error = np.sum(1 / conf ** 2) ** (-1 / 2)
+        error = max(error, np.max(conf))
+
+    return mean, error
+
