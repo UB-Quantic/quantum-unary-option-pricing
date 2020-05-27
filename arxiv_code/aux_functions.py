@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.optimize import newton
+from scipy.special import erfinv
 import matplotlib.pyplot as plt
 
 def log_normal(x, mu, sig):
@@ -82,7 +83,42 @@ def bound(delta, mu, constant):
     return np.power((np.exp(delta))/(1 + delta)**(1 + delta), mu) - constant
 
 
-def max_likelihood(theta, m_s, ones_s, zeroes_s, f = .1, spread=.1):
+def max_likelihood(theta, m_s, ones_s, zeroes_s, alpha=0.05, cumulative=True):
+    z = erfinv(1 - alpha / 2)
+    ones_s = np.array(ones_s)
+    zeroes_s = np.array(zeroes_s)
+    valid_s = ones_s + zeroes_s
+    a_s = ones_s / valid_s
+    theta_s = np.zeros(len(m_s))
+    err_theta_s = np.zeros(len(m_s))
+    if m_s[0] == 0:
+        theta_s[0] = np.arcsin(np.sqrt(a_s[0]))
+        err_theta_s[0] = z / 2 / np.sqrt(valid_s[0])
+    else:
+        raise ValueError('AE does not start with m=0')
+
+    for j, m in enumerate(m_s[1:]):
+        aux_theta = np.arcsin(np.sqrt(a_s[j + 1]))
+        theta = [aux_theta] + [np.pi * k + aux_theta for k in range(1, m + 1, 1)] + \
+                [np.pi * k - aux_theta for k in range(1, m + 1, 1)]
+        theta = np.array(theta) / (2 * m + 1)
+        arg = np.argmin(np.abs(theta - theta_s[j]))
+        new_theta = theta[arg]
+        new_error_theta = z / 2 / np.sqrt(valid_s[j + 1]) / (2 * m + 1)
+        if cumulative:
+            theta_s[j + 1] = (theta_s[j] / err_theta_s[j] ** 2 + new_theta / new_error_theta**2 ) /\
+                             (1 / err_theta_s[j] ** 2 + 1 / new_error_theta**2 )
+            err_theta_s[j + 1] = (1 / err_theta_s[j] ** 2 + 1 / new_error_theta**2 )**(-1/2)
+        else:
+            theta_s[j+1] = new_theta
+            err_theta_s[j+1] = new_error_theta
+
+    return theta_s, err_theta_s
+
+
+
+
+def max_likelihood_brute_force(theta, m_s, ones_s, zeroes_s, f = .1, spread=.1):
     if len(m_s) != len(ones_s) or len(m_s) != len(zeroes_s):
         raise ValueError('Dimension mismatch')
     length=len(theta)
@@ -163,38 +199,21 @@ def detect_sign(array):
     return signchange
 
 def experimental_data(data, conf):
-    bool_index = ~np.isnan(data)
-    valids = np.sum(bool_index)
-    data = data[bool_index]
-    conf = conf[bool_index]
-    if valids == 0:
-        data_mean = np.nan
-        data_std = np.nan
-        conf_mean = np.nan
-        conf_std = np.nan
-    else:
-        data_mean = np.mean(data)
-        data_std = np.std(data)
-        conf_mean = np.mean(conf)
-        conf_std = np.std(conf)
+    # data_mean = np.mean(data)
+    # data_std = np.std(data)
+    conf_mean = np.mean(conf)
+    conf_std = np.std(conf)
 
 
     # print((data_mean, data_std), (conf_mean, conf_std), np.sum(bool_index))
     # return (data_mean, data_std), (conf_mean, conf_std), np.sum(bool_index)
-    return errors_experiment(data, conf), (conf_mean, conf_std), np.sum(bool_index)
+    return errors_experiment(data, conf), (conf_mean, conf_std)
 
 def errors_experiment(data, conf):
-    bool_index = ~np.isnan(data)
-    valids = np.sum(bool_index)
-    data = data[bool_index]
-    conf = conf[bool_index]
-    if valids == 0:
-        mean = np.nan
-        error = np.nan
-    else:
-        mean = np.sum(data / conf ** 2) / np.sum(1 / conf ** 2)
-        error = np.sum(1 / conf ** 2) ** (-1 / 2)
-        error = max(error, np.max(conf))
+
+    mean = np.sum(data / conf ** 2) / np.sum(1 / conf ** 2)
+    error = np.sum(1 / conf ** 2) ** (-1 / 2)
+    error = max(error, np.max(conf))
 
     return mean, error
 
