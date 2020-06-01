@@ -31,8 +31,8 @@ class errors:
         self.max_gate_error = max_gate_error
         self.steps = steps
         self.error_steps = np.linspace(0, max_gate_error, steps)
-        self.list_errors = ['bitflip', 'bitflip_m', 'phaseflip', 'phaseflip', 'bitphaseflip', 'bitphaseflip',
-                            'depolarizing', 'depolarizing_m', 'thermal', 'thermal_m', 'measurement']
+        self.list_errors = ['bitflip', 'phaseflip', 'phaseflip', 'bitphaseflip',
+                            'depolarizing', 'thermal', 'measurement']
         try:
             os.makedirs(name_folder_data(self.data))
         except:
@@ -454,6 +454,7 @@ class errors:
                                    shots=500, u=0, error=0.05):
         qubits = int(np.log2(bins))
         error_name = self.change_name(error_name, measure_error, thermal_error)
+        print(error_name)
         noise = self.select_error(error_name, measure_error=measure_error, thermal_error=thermal_error)
         m_s = np.arange(0, M + 1, 1)
         (values, pdf) = bin.get_pdf(qubits, self.S0, self.sig, self.r, self.T)[1]
@@ -510,6 +511,7 @@ class errors:
                                    shots=500):
         qubits = int(bins)
         error_name = self.change_name(error_name, measure_error, thermal_error)
+        print(error_name)
         noise = self.select_error(error_name, measure_error=measure_error, thermal_error=thermal_error)
         m_s = np.arange(0, M + 1, 1)
         (values, pdf), (mu, mean, variance)= un.get_pdf(qubits, self.S0, self.sig, self.r, self.T)
@@ -559,6 +561,7 @@ class errors:
 
         (values, pdf), (mu, mean, variance) = un.get_pdf(bins, self.S0, self.sig, self.r, self.T)
         a_un = np.sum(pdf[values >= self.K] * (values[values >= self.K] - self.K)) / (np.max(values) - self.K)
+        error_name = self.change_name(error_name, measure_error, thermal_error)
         print(a_un)
 
         (values, pdf) = bin.get_pdf(int(np.log2(bins)), self.S0, self.sig, self.r, self.T)[1]
@@ -656,19 +659,22 @@ class errors:
                 data[_], conf[_] = experimental_data(np.abs(a[_] - a_un), confidences[_])
                 data_a[_], conf_a[_] = experimental_data(a[_], confidences[_])
 
-            ax_0.scatter(100*self.error_steps, 100*(data[:,0]), color='C%s' % (2+j), label=r'M=%s' % m, marker='x')
-            ax_0.fill_between(100*self.error_steps, 100*(data[:,0] - data[:, 1]), 100*(data[:,0] + data[:, 1]), color='C%s' % (2+j), alpha=0.3)
+            ax_0.scatter(100*self.error_steps, 100*(data[:,0]), color='C%s' % (j), label=r'M=%s' % m, marker='x')
+            ax_0.fill_between(100*self.error_steps, 100*(data[:,0] - data[:, 1]), 100*(data[:,0] + data[:, 1]), color='C%s' % (j), alpha=0.3)
 
 
             # ax_1.errorbar(100*self.error_steps, conf_a[:, 0], yerr=conf_a[:, 1], color='C%s' % (2 + j), alpha=0.7, capsize=10, ls=' ')
-            ax_1.scatter(100*self.error_steps, 100*conf_a[:, 0], color='C%s' % (2 + j), marker='x', zorder=3, s=100, label=r'M=%s' % m)
+            ax_1.scatter(100*self.error_steps, 100*conf_a[:, 0], color='C%s' % (j), marker='x', zorder=3, s=100, label=r'M=%s' % m)
             # ax_1.errorbar(self.error_steps, conf[:, 0], yerr = conf[:, 1], color='C%s' % j, label=r'M=%s' % m, marker='x')
             bound_down = np.sqrt(data_a[:, 0]) * np.sqrt(1 - data_a[:, 0]) * z / np.sqrt(shots) / np.sum(
                 1 + 2 * (np.arange(m + 1)))
             bound_up = np.sqrt(data_a[:, 0]) * np.sqrt(1 - data_a[:, 0]) * z / np.sqrt(shots) / np.sqrt(np.sum(
                 1 + 2 * (np.arange(m + 1))))
-            ax_1.plot(100 * self.error_steps, 100*bound_down, ls='-.', color='C%s' % (2 + j))
-            ax_1.plot(100 * self.error_steps, 100*bound_up, ls='-.', color='C%s' % (2 + j))
+            bound_middle = np.sqrt(data_a[:, 0]) * np.sqrt(1 - data_a[:, 0]) * z / np.sqrt(shots) / (np.sum(
+                1 + 2 * (np.arange(m + 1))))**(3/4)
+            ax_1.plot(100 * self.error_steps, 100 * bound_middle, ls=':', color='C%s' % (j))
+            ax_1.plot(100 * self.error_steps, 100*bound_down, ls='-.', color='C%s' % (j))
+            ax_1.plot(100 * self.error_steps, 100*bound_up, ls='-.', color='C%s' % (j))
             #ax_1.fill_between(100 * self.error_steps, bound_down, bound_up, color='C%s' % (2 + j), alpha=0.3)
 
             '''ax_1.scatter(self.error_steps, conf[:, 0], color='C%s' % j, label=r'M=%s' % m, marker='x', zorder=10)
@@ -734,21 +740,21 @@ class errors:
                 data[_], conf[_] = experimental_data(np.abs(a[_] - a_bin), confidences[_])
                 data_a[_], conf_a[_] = experimental_data(a[_], confidences[_])
 
-            ax_0.scatter(100 * self.error_steps, 100 * (data[:, 0]), color='C%s' % (2 + j), label=r'M=%s' % m,
-                         marker='x')
+            ax_0.scatter(100 * self.error_steps, 100 * (data[:, 0]), color='C%s' % (j), label=r'M=%s' % m,
+                         marker='+')
             ax_0.fill_between(100 * self.error_steps, 100 * (data[:, 0] - data[:, 1]), 100 * (data[:, 0] + data[:, 1]),
-                              color='C%s' % (2 + j), alpha=0.3)
+                              color='C%s' % (j), alpha=0.3)
 
             # ax_1.errorbar(100 * self.error_steps, conf_a[:, 0], yerr=conf_a[:, 1], color='C%s' % (2 + j), alpha=0.7, capsize=10, ls=' ')
-            ax_1.scatter(100 * self.error_steps, 100*conf_a[:, 0], color='C%s' % (2 + j), marker='x', zorder=3, s=100,
+            ax_1.scatter(100 * self.error_steps, 100*conf_a[:, 0], color='C%s' % (j), marker='+', zorder=3, s=100,
                          label=r'M=%s' % m)
             # ax_1.errorbar(self.error_steps, conf[:, 0], yerr = conf[:, 1], color='C%s' % j, label=r'M=%s' % m, marker='x')
             bound_down = np.sqrt(data_a[:, 0]) * np.sqrt(1 - data_a[:, 0]) * z / np.sqrt(shots) / np.sum(
                 1 + 2 * (np.arange(m + 1)))
             bound_up = np.sqrt(data_a[:, 0]) * np.sqrt(1 - data_a[:, 0]) * z / np.sqrt(shots) / np.sqrt(np.sum(
                 1 + 2 * (np.arange(m + 1))))
-            ax_1.plot(100 * self.error_steps, 100*bound_down, ls='-.', color='C%s' % (2 + j))
-            ax_1.plot(100 * self.error_steps, 100*bound_up, ls='-.', color='C%s' % (2 + j))
+            ax_1.plot(100 * self.error_steps, 100*bound_down, ls='-.', color='C%s' % (j))
+            ax_1.plot(100 * self.error_steps, 100*bound_up, ls=':', color='C%s' % (j))
 
         ax_0.set(xlabel='single-qubit gate error (%)', ylabel='percentage off optimal $a$ (%)', ylim=[0, 25])
         ax_1.set(xlabel='single-qubit gate error (%)', ylabel='$\Delta a$ (%)', ylim=[0.01, 10], yscale='log')
