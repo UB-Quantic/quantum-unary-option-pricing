@@ -3,6 +3,15 @@ from scipy.optimize import newton
 from scipy.special import erfinv
 import matplotlib.pyplot as plt
 
+def name_folder_data(data):
+    """
+    Auxiliary function to create names in a fast way
+    :param data: Data to create name (S0, sig, r, T, K)
+    :return: name
+    """
+    string = 'results/S0(%s)_sig(%s)_r(%s)_T(%s)_K(%s)' % data
+    return string
+
 def log_normal(x, mu, sig):
     """
     Lognormal probability distribution function normalized for representation in finite intervals
@@ -40,50 +49,25 @@ def classical_payoff(S0, sig, r, T, K, samples=10000):
     return cl_payoff
 
 def KL(p, q):
+    """
+    Function to compute Kullback-Leibler divergence
+    :param p: Probability distribution
+    :param q: Target probability distribution
+    :return:
+    """
     return np.sum(p * np.log(p / q))
 
 
-def find_next_j(j, theta_l, theta_h, up):
-    J_ = 4 * j + 2
-    theta_min = J_ * theta_l
-    theta_max = J_ * theta_h
-    print(theta_h - theta_l)
-    J_max = (np.floor(np.pi / (theta_h - theta_l)))
-    J = J_max - (J_max - 2) % 4
+def get_theta(m_s, ones_s, zeroes_s, alpha=0.05):
+    """
+    Function to extract measurement values of a in an iterative AE algorithm
+    :param m_s: Set of m
+    :param ones_s: Number of outcomes with 1, as many as m_s
+    :param zeroes_s: Number of outcomes with 0, as many as m_s
+    :param alpha: Confidence level.
+    :return: Results and uncertainties for theta
+    """
 
-    while J >= 2 * J_:
-        q = J / J_
-        if np.remainder(q * theta_max, 2 * np.pi) < np.pi and np.remainder(q * theta_min, 2 * np.pi) < np.pi:
-            J_ = J
-            up = True
-            j = (J_ - 2) / 4
-            return j, up
-        elif np.remainder(q * theta_max, 2 * np.pi) >= np.pi and np.remainder(q * theta_min, 2 * np.pi) >= np.pi:
-            J_ = J
-            up = False
-            j = (J_ - 2) / 4
-            return j, up
-
-        else:
-            J = J - 4
-
-    return (j, up)
-
-def chernoff(m, c):
-    try:
-        delta_plus = np.real(newton(bound, 1, args=(m, c / 2))) # Aquí hay problemas
-        delta_minus = np.real(newton(bound, -1, args=(m, c / 2)))
-    except:
-        delta_plus = np.sqrt(2 / m * np.log(2 / c))
-        delta_minus = - delta_plus
-    m_max, m_min = m * (1 + delta_plus), m * (1 + delta_minus)
-    return m_min, m_max
-
-def bound(delta, mu, constant):
-    return np.power((np.exp(delta))/(1 + delta)**(1 + delta), mu) - constant
-
-
-def max_likelihood(theta, m_s, ones_s, zeroes_s, alpha=0.05, cumulative=True):
     z = erfinv(1 - alpha / 2)
     ones_s = np.array(ones_s)
     zeroes_s = np.array(zeroes_s)
@@ -105,111 +89,35 @@ def max_likelihood(theta, m_s, ones_s, zeroes_s, alpha=0.05, cumulative=True):
         arg = np.argmin(np.abs(theta - theta_s[j]))
         new_theta = theta[arg]
         new_error_theta = z / 2 / np.sqrt(valid_s[j + 1]) / (2 * m + 1)
-        if cumulative:
-            theta_s[j + 1] = (theta_s[j] / err_theta_s[j] ** 2 + new_theta / new_error_theta**2 ) /\
-                             (1 / err_theta_s[j] ** 2 + 1 / new_error_theta**2 )
-            err_theta_s[j + 1] = (1 / err_theta_s[j] ** 2 + 1 / new_error_theta**2 )**(-1/2)
-        else:
-            theta_s[j+1] = new_theta
-            err_theta_s[j+1] = new_error_theta
+
+        theta_s[j + 1] = (theta_s[j] / err_theta_s[j] ** 2 + new_theta / new_error_theta**2 ) /\
+                         (1 / err_theta_s[j] ** 2 + 1 / new_error_theta**2 )
+        err_theta_s[j + 1] = (1 / err_theta_s[j] ** 2 + 1 / new_error_theta**2 )**(-1/2)
+
 
     return theta_s, err_theta_s
 
 
 
-
-def max_likelihood_brute_force(theta, m_s, ones_s, zeroes_s, f = .1, spread=.1):
-    if len(m_s) != len(ones_s) or len(m_s) != len(zeroes_s):
-        raise ValueError('Dimension mismatch')
-    length=len(theta)
-    L = 1
-    theta_max_s = np.zeros(len(m_s))
-    theta_max_s.fill(np.nan)
-    error_s = np.zeros(len(m_s))
-    error_s.fill(np.nan)
-    for i in range(len(m_s)):
-        # print(m_s[i], ones_s[i], zeroes_s[i])
-        L *= (np.sin((2 * m_s[i] + 1) * theta)**(2))**ones_s[i]
-        L *= (np.cos((2 * m_s[i] + 1) * theta)**(2))**zeroes_s[i]
-        L = L / np.max(L)
-        # L = L ** (sms[i])
-        #plt.plot(theta, L, c='C1')
-        #plt.show()
-
-        arg_max = np.argmax(L)
-        if arg_max == 0 or arg_max == len(theta) - 1:
-            break
-        max_L = np.max(L)
-        value_plus = 1
-        j_plus=0
-        while value_plus > f:
-            j_plus += 1
-            try:
-                value_plus = L[arg_max + j_plus]
-            except:
-                j_plus = length
-                break
-
-        value_minus = 1
-        j_minus = 0
-        while value_minus > max_L * f:
-            j_minus -= 1
-            try:
-                value_minus = L[arg_max + j_minus]
-            except:
-                j_minus = -length
-                break
-
-        try:
-            arg_plus = theta[arg_max + j_plus]
-            arg_minus = theta[arg_max + j_minus]
-
-        except:
-            if j_plus == length:
-                arg_minus = theta[arg_max + j_minus]
-                arg_plus = 2 * np.max(theta) - arg_minus
-            elif j_minus == -length:
-                arg_plus = theta[arg_max + j_plus]
-                arg_minus = 2 * np.min(theta) - arg_plus
-            else:
-                print('failed')
-
-        arg_plus, arg_minus = max(arg_plus, arg_minus), min(arg_plus, arg_minus)
-        arg_minus=max(arg_minus, 0)
-        arg_plus = min(arg_plus, np.pi / 2)
-        l = arg_plus - arg_minus
-        theta = np.linspace(arg_minus - spread * l, arg_plus + spread * l, length)
-        #print(arg_minus, arg_plus)
-        L=1
-        L *= (np.sin((2 * m_s[i] + 1) * theta) ** (2)) ** ones_s[i]
-        L *= (np.cos((2 * m_s[i] + 1) * theta) ** (2)) ** zeroes_s[i]
-        L = L / np.max(L)
-        #plt.plot(theta, L)
-        #plt.show()
-        theta_max_s[i] = theta[arg_max]
-        error_s[i] = l
-
-    # print(theta_max_s, error_s)
-    return theta_max_s, error_s
-
-def detect_sign(array):
-    asign = np.sign(array)
-    signchange = ((np.roll(asign, 1) - asign) != 0).astype(int)
-    signchange[0]=0
-    return signchange
-
 def experimental_data(data, conf):
-    # data_mean = np.mean(data)
-    # data_std = np.std(data)
+    """
+    Function for computing weighted averages and confidences of data
+    :param data: Measured values
+    :param conf: Confidences of data
+    :return: (weighted average, weighted error), (mean of errors, confidence of errors)
+    """
     conf_mean = np.mean(conf)
     conf_std = np.std(conf)
 
-
-    # print((data_mean, data_std), (conf_mean, conf_std), np.sum(bool_index))
-    # return (data_mean, data_std), (conf_mean, conf_std), np.sum(bool_index)
     return errors_experiment(data, conf), (conf_mean, conf_std)
 
 def errors_experiment(data, conf):
+    """
+    Function for computing weighted averages
+    :param data: Measured values
+    :param conf: Confidences of data
+    :return: (weighted average, weighted error)
+    """
 
     mean = np.sum(data / conf ** 2) / np.sum(1 / conf ** 2)
     error = np.sum(1 / conf ** 2) ** (-1 / 2)

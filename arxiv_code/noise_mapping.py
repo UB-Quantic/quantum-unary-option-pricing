@@ -82,7 +82,7 @@ def noise_model_bit(error, measure=True, thermal=True):
     return noise_model
 
 
-def noise_model_bitphase(error, measure=False, thermal=True):
+def noise_model_bitphase(error, measure=True, thermal=True):
     """
     Creates error for bitphase flip
     :param error: Probability of happening a bitphase flip
@@ -116,7 +116,7 @@ def noise_model_bitphase(error, measure=False, thermal=True):
 
     return noise_model
 
-def noise_model_depolarizing(error, measure=False, thermal=True):
+def noise_model_depolarizing(error, measure=True, thermal=True):
     """
     Creates error for depolarizing channel
     :param error: Probability of depolarizing channel
