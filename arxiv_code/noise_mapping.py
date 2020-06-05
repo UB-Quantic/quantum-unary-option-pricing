@@ -63,8 +63,9 @@ def noise_model_bit(error, measure=True, thermal=True):
     bit_flip = pauli_error([('X', flip_error), ('I', 1 - flip_error)])
     cnot_flip = pauli_error([('X', cnot_error), ('I', 1 - cnot_error)])
     cnot_error = cnot_flip.tensor(cnot_flip)
-    noise_model.add_all_qubit_quantum_error(cnot_error, ['cx'], warnings=False)
     noise_model.add_all_qubit_quantum_error(bit_flip, ["u1", "u2", "u3"])
+    noise_model.add_all_qubit_quantum_error(cnot_error, ['cx'], warnings=False)
+
 
     if measure:
         measure_error = 10 * error
@@ -81,7 +82,7 @@ def noise_model_bit(error, measure=True, thermal=True):
     return noise_model
 
 
-def noise_model_bitphase(error, measure=False, thermal=True):
+def noise_model_bitphase(error, measure=True, thermal=True):
     """
     Creates error for bitphase flip
     :param error: Probability of happening a bitphase flip
@@ -115,7 +116,7 @@ def noise_model_bitphase(error, measure=False, thermal=True):
 
     return noise_model
 
-def noise_model_depolarizing(error, measure=False, thermal=True):
+def noise_model_depolarizing(error, measure=True, thermal=True):
     """
     Creates error for depolarizing channel
     :param error: Probability of depolarizing channel
