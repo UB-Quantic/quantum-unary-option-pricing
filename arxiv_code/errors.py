@@ -529,7 +529,7 @@ class errors:
                        self.max_gate_error, self.steps, repeats, m), confidence[j])
 
     def error_emplitude_estimation(self, bins, error_name, repeats, M=4, measure_error=False, thermal_error=False,
-                                   shots=500, alpha=0.05):
+                                   shots=500, alpha=0.05, u=0, e=0.05):
         """
         Function to paint outcomes and errors for amplitude estimation
         :param bins:
@@ -544,7 +544,7 @@ class errors:
         """
 
         (values, pdf) = un.get_pdf(bins, self.S0, self.sig, self.r, self.T)[0]
-        a_un = np.sum(pdf[values >= self.K] * (values[values >= self.K] - self.K)) / (np.max(values) - self.K)
+        a_un = np.sum(pdf[values >= self.K] * (values[values >= self.K] - self.K))
         error_name = self.change_name(error_name, measure_error, thermal_error)
 
         fig, ax = plt.subplots()
@@ -570,19 +570,30 @@ class errors:
             bin_data[m], bin_conf[m] = errors_experiment(bin_data_, bin_conf_)
 
         a_bin = errors_experiment(bin_data, bin_conf)[0]
+        (values, pdf) = bin.get_pdf(bins, self.S0, self.sig, self.r, self.T)[1]
+        high, low = np.max(values), np.min(values)
+        k = int(np.floor(bins * (self.K - low) / (high - low)))
+        c = (2 * e) ** (1 / (2 * u + 2))
+        a_bin = (high - low) / bins * (a_bin - .5 + c) * (bins - 1 - k) / (2 * c)
         '''
         a_bin must be calculated in this way because the error allowed in the payoff detracts the precision 
         of Amplitude Estimation
         '''
+        un_data *= (np.max(values) - self.K)
+        un_conf *= (np.max(values) - self.K)
+        bin_data = (high - low) / bins * (bin_data - .5 + c) * (bins - 1 - k) / (2 * c)
+        bin_conf = (high - low) / bins * (bin_conf) * (bins - 1 - k) / (2 * c)
         ax.scatter(np.arange(M+1), un_data, c='C0', marker='x', label='unary', zorder=10)
         ax.fill_between(np.arange(M+1), un_data - un_conf, un_data + un_conf, color='C0', alpha=0.3)
+        # ax.plot([0, M], [a_un, a_un], c='blue', ls='--')
+        ax.plot([0, M], [self.cl_payoff, self.cl_payoff], c='black', ls='--', label='Cl. payoff')
         ax.plot([0, M], [a_un, a_un], c='blue', ls='--')
 
         ax.scatter(np.arange(M + 1), bin_data, c='C1', marker='+', label='binary', zorder=10)
         ax.fill_between(np.arange(M + 1), bin_data - bin_conf, bin_data + bin_conf, color='C1', alpha=0.3, zorder=10)
         ax.plot([0, M], [a_bin, a_bin], c='orangered', ls='--')
-        ax.set(xlabel='AE iterations', ylabel=r'$a$', xticks=np.arange(0, M + 1), xticklabels=np.arange(0, M + 1))
-        ax.legend(loc='center right')
+        ax.set(xlabel='AE iterations', ylabel='Payoff', xticks=np.arange(0, M + 1), xticklabels=np.arange(0, M + 1))
+        ax.legend()
 
         fig.savefig(name_folder_data(
             self.data) + '/%s_bins/' % bins + error_name + '_amplitude_estimation_perfect_circuit_results.pdf')
@@ -591,22 +602,22 @@ class errors:
         fig, bx = plt.subplots()
         bx.scatter(np.arange(M + 1) + 0.1, un_conf, c='C0', label='unary', marker='x', zorder=3, s=100)
         bound_down = np.sqrt(un_data) * np.sqrt(1 - un_data) * z / np.sqrt(shots) / np.cumsum(
-            1 + 2 * (np.arange(M + 1)))
+            1 + 2 * (np.arange(M + 1))) * (np.max(values) - self.K)
         bound_up = np.sqrt(un_data) * np.sqrt(1 - un_data) * z / np.sqrt(shots) / np.sqrt(np.cumsum(
-            1 + 2 * (np.arange(M + 1))))
+            1 + 2 * (np.arange(M + 1)))) * (np.max(values) - self.K)
         bx.plot(np.arange(M + 1) + 0.1, bound_up, ls=':', c='C0')
         bx.plot(np.arange(M + 1) + 0.1, bound_down, ls='-.', c='C0')
 
         bx.scatter(np.arange(M + 1) - 0.1, bin_conf, c='C1', label='binary', marker='+', zorder=3, s=100)
         bound_down = np.sqrt(bin_data) * np.sqrt(1 - bin_data) * z / np.sqrt(shots) / np.cumsum(
-            1 + 2 * (np.arange(M + 1)))
+            1 + 2 * (np.arange(M + 1))) * (high - low) / bins * (bins - 1 - k) / (2 * c)
         bound_up = np.sqrt(bin_data) * np.sqrt(1 - bin_data) * z / np.sqrt(shots) / np.sqrt(np.cumsum(
-            1 + 2 * (np.arange(M + 1))))
+            1 + 2 * (np.arange(M + 1)))) * (high - low) / bins * (bins - 1 - k) / (2 * c)
         bx.plot(np.arange(M + 1) - 0.1, bound_up, ls=':', c='C1')
         bx.plot(np.arange(M + 1) - 0.1, bound_down, ls='-.', c='C1')
 
         bx.set(xlabel='AE iterations', xticks=np.arange(0, M+1), xticklabels=np.arange(0, M+1),
-               ylabel=r'$\Delta a $', ylim=[0.0005,0.05])
+               ylabel=r'$\Delta {\rm Payoff} $', ylim=[0.0005,0.05])
         plt.yscale('log')
         custom_lines = [Line2D([0], [0], color='C0', marker='x', lw=0, markersize=10),
                         Line2D([0], [0], color='C1', marker='+', lw=0, markersize=10),
@@ -635,27 +646,28 @@ class errors:
         """
         z = erfinv(1 - alpha / 2)
         (values, pdf) = un.get_pdf(bins, self.S0, self.sig, self.r, self.T)[0]
-        a_un = np.sum(pdf[values >= self.K] * (values[values >= self.K] - self.K)) / (np.max(values) - self.K)
+        payoff_un = np.sum(pdf[values >= self.K] * (values[values >= self.K] - self.K))
         error_name = self.change_name(error_name, measure_error, thermal_error)
         m_s = np.arange(0, M + 1, 1)
         fig_0, ax_0 = plt.subplots()
         fig_1, ax_1 = plt.subplots()
         custom_lines=[]
         for j, m in enumerate(m_s):
-            a = np.loadtxt(name_folder_data(
+            payoff = np.loadtxt(name_folder_data(
                 self.data) + '/%s_bins/unary/amplitude_estimation/' % bins + error_name + '_gate(%s)_steps(%s)_repeats(%s)_M(%s).npz' % (
-                       self.max_gate_error, self.steps, repeats, m))
-            confidences= np.loadtxt(name_folder_data(
+                       self.max_gate_error, self.steps, repeats, m)) * (np.max(values) - self.K)
+            payoff_confidences= np.loadtxt(name_folder_data(
                 self.data) + '/%s_bins/unary/amplitude_estimation/' % bins + error_name + '_gate(%s)_steps(%s)_repeats(%s)_M(%s)_confidence.npz' % (
-                                             self.max_gate_error, self.steps, repeats, m))
+                                             self.max_gate_error, self.steps, repeats, m)) * (np.max(values) - self.K)
 
             data = np.empty((self.steps, 2))
             data_a = np.empty((self.steps, 2))
             conf = np.empty((self.steps, 2))
             conf_a = np.empty((self.steps, 2))
             for _ in range(self.steps):
-                data[_], conf[_] = experimental_data(np.abs(a[_] - a_un), confidences[_])
-                data_a[_], conf_a[_] = experimental_data(a[_], confidences[_])
+                data[_], conf[_] = experimental_data(np.abs(payoff[_] - payoff_un) / payoff_un,
+                                                     payoff_confidences[_] / payoff_un)
+                data_a[_], conf_a[_] = experimental_data(payoff[_] / payoff_un, payoff_confidences[_]/payoff_un)
 
             ax_0.scatter(100*self.error_steps, 100*(data[:,0]), color='C%s' % (j), label=r'M=%s' % m, marker='x')
             ax_0.fill_between(100*self.error_steps, 100*(data[:,0] - data[:, 1]), 100*(data[:,0] + data[:, 1]), color='C%s' % (j), alpha=0.3)
@@ -663,16 +675,15 @@ class errors:
             custom_lines.append(Line2D([0], [0], color='C%s' % (j), lw=0, marker='x'))
 
             ax_1.scatter(100*self.error_steps, 100*conf_a[:, 0], color='C%s' % (j), marker='+', zorder=0, s=30, label=r'M=%s' % m)
-            bound_down = np.sqrt(data_a[:, 0]) * np.sqrt(1 - data_a[:, 0]) * z / np.sqrt(shots) / np.sum(
+            bound_down = np.sqrt(data_a[:, 0]) * np.sqrt((np.max(values) - self.K) / payoff_un - data_a[:, 0]) * z / np.sqrt(shots) / np.sum(
                 1 + 2 * (np.arange(m + 1)))
-            bound_up = np.sqrt(data_a[:, 0]) * np.sqrt(1 - data_a[:, 0]) * z / np.sqrt(shots) / np.sqrt(np.sum(
+            bound_up = np.sqrt(data_a[:, 0]) * np.sqrt((np.max(values) - self.K) / payoff_un - data_a[:, 0]) * z / np.sqrt(shots) / np.sqrt(np.sum(
                 1 + 2 * (np.arange(m + 1))))
             ax_1.plot(100 * self.error_steps, 100*bound_down, ls='-.', color='C%s' % (j), zorder=2)
             ax_1.plot(100 * self.error_steps, 100*bound_up, ls=':', color='C%s' % (j), zorder=2)
 
-
-        ax_0.set(xlabel='single-qubit gate error (%)', ylabel='percentage off optimal $a$ (%)', ylim=[0, 25])
-        ax_1.set(xlabel='single-qubit gate error (%)', ylabel='$\Delta a$ (%)', ylim=[0.005, 10], yscale='log')
+        ax_0.set(xlabel='single-qubit gate error (%)', ylabel='percentage off optimal payoff (%)', ylim=[0, 175])
+        ax_1.set(xlabel='single-qubit gate error (%)', ylabel='$\Delta$ payoff (%)', ylim=[0.05, 50], yscale='log')
         ax_0.legend(loc='upper left')
         custom_lines.append(Line2D([0], [0], color='black', lw=1, ls=':'))
         custom_lines.append(Line2D([0], [0], color='black', lw=1, ls='-.'))
@@ -688,7 +699,7 @@ class errors:
 
 
     def paint_amplitude_estimation_binary(self, bins, error_name, repeats, M=4, measure_error=False,
-                                         thermal_error=False, shots=500, alpha=0.05):
+                                         thermal_error=False, shots=500, alpha=0.05, u=0, e=0.05):
         """
         Function to paint error and confidences for amplitude estimation in the binary case
         :param bins:
@@ -708,13 +719,19 @@ class errors:
         fig_0, ax_0 = plt.subplots()
         fig_1, ax_1 = plt.subplots()
         custom_lines=[]
+        (values, pdf) = bin.get_pdf(bins, self.S0, self.sig, self.r, self.T)[1]
+        high, low = np.max(values), np.min(values)
+        k = int(np.floor(bins * (self.K - low) / (high - low)))
+        c = (2 * e) ** (1 / (2 * u + 2))
         for j, m in enumerate(m_s):
             a = np.loadtxt(name_folder_data(
                 self.data) + '/%s_bins/binary/amplitude_estimation/' % bins + error_name + '_gate(%s)_steps(%s)_repeats(%s)_M(%s).npz' % (
                        self.max_gate_error, self.steps, repeats, m))
+            payoff = (high - low) / bins * (a - .5 + c) * (bins - 1 - k) / (2 * c)
             confidences= np.loadtxt(name_folder_data(
                 self.data) + '/%s_bins/binary/amplitude_estimation/' % bins + error_name + '_gate(%s)_steps(%s)_repeats(%s)_M(%s)_confidence.npz' % (
                                              self.max_gate_error, self.steps, repeats, m))
+            payoff_confidences = (high - low) / bins * (confidences) * (bins - 1 - k) / (2 * c)
 
             data = np.empty((self.steps, 2))
             data_a = np.empty((self.steps, 2))
@@ -724,9 +741,10 @@ class errors:
             for _ in range(self.steps):
                 if _ == 0:
                     a_bin = errors_experiment(a[_], confidences[_])[0]
+                    payoff_bin = (high - low) / bins * (a_bin - .5 + c) * (bins - 1 - k) / (2 * c)
 
-                data[_], conf[_] = experimental_data(np.abs(a[_] - a_bin), confidences[_])
-                data_a[_], conf_a[_] = experimental_data(a[_], confidences[_])
+                data[_], conf[_] = experimental_data(np.abs(payoff[_] - payoff_bin) / payoff_bin, confidences[_]/payoff_bin)
+                data_a[_], conf_a[_] = experimental_data(payoff[_]/payoff_bin, payoff_confidences[_]/payoff_bin)
 
             ax_0.scatter(100 * self.error_steps, 100 * (data[:, 0]), color='C%s' % (j), label=r'M=%s' % m,
                          marker='+')
@@ -738,15 +756,16 @@ class errors:
             ax_1.scatter(100 * self.error_steps, 100 * conf_a[:, 0], color='C%s' % (j), marker='+', zorder=0, s=30,
                          label=r'M=%s' % m)
 
-            bound_down = np.sqrt(data_a[:, 0]) * np.sqrt(1 - data_a[:, 0]) * z / np.sqrt(shots) / np.sum(
+            a_max = (high - low) / bins * (.5 + c) * (bins - 1 - k) / (2 * c) / payoff_bin
+            bound_down = np.sqrt(data_a[:, 0]) * np.sqrt(a_max - data_a[:, 0]) * z / np.sqrt(shots) / np.sum(
                 1 + 2 * (np.arange(m + 1)))
-            bound_up = np.sqrt(data_a[:, 0]) * np.sqrt(1 - data_a[:, 0]) * z / np.sqrt(shots) / np.sqrt(np.sum(
+            bound_up = np.sqrt(data_a[:, 0]) * np.sqrt(a_max - data_a[:, 0]) * z / np.sqrt(shots) / np.sqrt(np.sum(
                 1 + 2 * (np.arange(m + 1))))
             ax_1.plot(100 * self.error_steps, 100 * bound_down, ls='-.', color='C%s' % (j), zorder=2)
             ax_1.plot(100 * self.error_steps, 100 * bound_up, ls=':', color='C%s' % (j), zorder=2)
 
-        ax_0.set(xlabel='single-qubit gate error (%)', ylabel='percentage off optimal $a$ (%)', ylim=[0, 25])
-        ax_1.set(xlabel='single-qubit gate error (%)', ylabel='$\Delta a$ (%)', ylim=[0.005, 10],
+        ax_0.set(xlabel='single-qubit gate error (%)', ylabel='percentage off optimal payoff (%)', ylim=[0, 175])
+        ax_1.set(xlabel='single-qubit gate error (%)', ylabel='$\Delta$ payoff (%)', ylim=[0.05, 50],
                  yscale='log')
         ax_0.legend(loc='upper left')
         custom_lines.append(Line2D([0], [0], color='black', lw=1, ls=':'))
