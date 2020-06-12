@@ -11,10 +11,10 @@ data = (S0, sig, r, T, K)
 
 bins = 8
 max_error_gate = 0.001
-error_name = 'depolarizing'
+error_name = 'thermal'
 repeats = 10
-measure = True
-thermal = True
+measure = False
+thermal = False
 steps = 6
 Err = errors(data, max_error_gate, steps)
 print('binary')

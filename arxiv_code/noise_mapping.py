@@ -144,7 +144,7 @@ def noise_model_depolarizing(error, measure=True, thermal=True):
 
     return noise_model
 
-def noise_model_thermal(error, measure=False):
+def noise_model_thermal(error, measure=False, thermal=False):
     """
     Creates error for thermal relaxation for T1, T2 = 1.5, 1.2
     :param error: time of gate. Normalized to be equal to the error in all other functions
