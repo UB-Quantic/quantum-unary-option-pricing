@@ -200,6 +200,7 @@ class errors:
         ax.scatter(100 * self.error_steps, means_binary, s=20, color='C1', label='binary', marker='+')
         ax.fill_between(100 * self.error_steps, maxs_unary, mins_unary, alpha=0.2, facecolor='C0')
         ax.fill_between(100 * self.error_steps, maxs_binary, mins_binary, alpha=0.2, facecolor='C1')
+        ax.set(ylim=[0, 50])
         plt.ylabel('percentage off classical value (%)')
         plt.xlabel('single-qubit gate error (%)')
         ax.legend()
@@ -574,7 +575,7 @@ class errors:
         high, low = np.max(values), np.min(values)
         k = int(np.floor(bins * (self.K - low) / (high - low)))
         c = (2 * e) ** (1 / (2 * u + 2))
-        a_bin = (high - low) / bins * (a_bin - .5 + c) * (bins - 1 - k) / (2 * c)
+        payoff_bin = (high - low) / bins * (a_bin - .5 + c) * (bins - 1 - k) / (2 * c)
         '''
         a_bin must be calculated in this way because the error allowed in the payoff detracts the precision 
         of Amplitude Estimation
@@ -591,7 +592,7 @@ class errors:
 
         ax.scatter(np.arange(M + 1), bin_data, c='C1', marker='+', label='binary', zorder=10)
         ax.fill_between(np.arange(M + 1), bin_data - bin_conf, bin_data + bin_conf, color='C1', alpha=0.3, zorder=10)
-        ax.plot([0, M], [a_bin, a_bin], c='orangered', ls='--')
+        ax.plot([0, M], [payoff_bin, payoff_bin], c='orangered', ls='--')
         ax.set(xlabel='AE iterations', ylabel='Payoff', xticks=np.arange(0, M + 1), xticklabels=np.arange(0, M + 1))
         ax.legend()
 
@@ -599,20 +600,22 @@ class errors:
             self.data) + '/%s_bins/' % bins + error_name + '_amplitude_estimation_perfect_circuit_results.pdf')
 
         z = erfinv(1 - alpha/2)
+        a_max = (np.max(values) - self.K)
         fig, bx = plt.subplots()
         bx.scatter(np.arange(M + 1) + 0.1, un_conf, c='C0', label='unary', marker='x', zorder=3, s=100)
-        bound_down = np.sqrt(un_data) * np.sqrt(1 - un_data) * z / np.sqrt(shots) / np.cumsum(
-            1 + 2 * (np.arange(M + 1))) * (np.max(values) - self.K)
-        bound_up = np.sqrt(un_data) * np.sqrt(1 - un_data) * z / np.sqrt(shots) / np.sqrt(np.cumsum(
-            1 + 2 * (np.arange(M + 1)))) * (np.max(values) - self.K)
+        bound_down = np.sqrt(un_data) * np.sqrt(a_max - un_data) * z / np.sqrt(shots) / np.cumsum(
+            1 + 2 * (np.arange(M + 1)))
+        bound_up = np.sqrt(un_data) * np.sqrt(a_max - un_data) * z / np.sqrt(shots) / np.sqrt(np.cumsum(
+            1 + 2 * (np.arange(M + 1))))
         bx.plot(np.arange(M + 1) + 0.1, bound_up, ls=':', c='C0')
         bx.plot(np.arange(M + 1) + 0.1, bound_down, ls='-.', c='C0')
 
         bx.scatter(np.arange(M + 1) - 0.1, bin_conf, c='C1', label='binary', marker='+', zorder=3, s=100)
-        bound_down = np.sqrt(bin_data) * np.sqrt(1 - bin_data) * z / np.sqrt(shots) / np.cumsum(
-            1 + 2 * (np.arange(M + 1))) * (high - low) / bins * (bins - 1 - k) / (2 * c)
-        bound_up = np.sqrt(bin_data) * np.sqrt(1 - bin_data) * z / np.sqrt(shots) / np.sqrt(np.cumsum(
-            1 + 2 * (np.arange(M + 1)))) * (high - low) / bins * (bins - 1 - k) / (2 * c)
+        a_max = (high - low) / bins * (bins - 1 - k) / (2 * c)
+        bound_down = np.sqrt(bin_data) * np.sqrt(a_max - bin_data) * z / np.sqrt(shots) / np.cumsum(
+            1 + 2 * (np.arange(M + 1)))
+        bound_up = np.sqrt(bin_data) * np.sqrt(a_max - bin_data) * z / np.sqrt(shots) / np.sqrt(np.cumsum(
+            1 + 2 * (np.arange(M + 1))))
         bx.plot(np.arange(M + 1) - 0.1, bound_up, ls=':', c='C1')
         bx.plot(np.arange(M + 1) - 0.1, bound_down, ls='-.', c='C1')
 
@@ -675,9 +678,10 @@ class errors:
             custom_lines.append(Line2D([0], [0], color='C%s' % (j), lw=0, marker='x'))
 
             ax_1.scatter(100*self.error_steps, 100*conf_a[:, 0], color='C%s' % (j), marker='+', zorder=0, s=30, label=r'M=%s' % m)
-            bound_down = np.sqrt(data_a[:, 0]) * np.sqrt((np.max(values) - self.K) / payoff_un - data_a[:, 0]) * z / np.sqrt(shots) / np.sum(
+            a_max = (np.max(values) - self.K) / payoff_un
+            bound_down = np.sqrt(data_a[:, 0]) * np.sqrt(a_max - data_a[:, 0]) * z / np.sqrt(shots) / np.sum(
                 1 + 2 * (np.arange(m + 1)))
-            bound_up = np.sqrt(data_a[:, 0]) * np.sqrt((np.max(values) - self.K) / payoff_un - data_a[:, 0]) * z / np.sqrt(shots) / np.sqrt(np.sum(
+            bound_up = np.sqrt(data_a[:, 0]) * np.sqrt(a_max - data_a[:, 0]) * z / np.sqrt(shots) / np.sqrt(np.sum(
                 1 + 2 * (np.arange(m + 1))))
             ax_1.plot(100 * self.error_steps, 100*bound_down, ls='-.', color='C%s' % (j), zorder=2)
             ax_1.plot(100 * self.error_steps, 100*bound_up, ls=':', color='C%s' % (j), zorder=2)
@@ -743,7 +747,7 @@ class errors:
                     a_bin = errors_experiment(a[_], confidences[_])[0]
                     payoff_bin = (high - low) / bins * (a_bin - .5 + c) * (bins - 1 - k) / (2 * c)
 
-                data[_], conf[_] = experimental_data(np.abs(payoff[_] - payoff_bin) / payoff_bin, confidences[_]/payoff_bin)
+                data[_], conf[_] = experimental_data(np.abs(payoff[_] - payoff_bin) / payoff_bin, payoff_confidences[_]/payoff_bin)
                 data_a[_], conf_a[_] = experimental_data(payoff[_]/payoff_bin, payoff_confidences[_]/payoff_bin)
 
             ax_0.scatter(100 * self.error_steps, 100 * (data[:, 0]), color='C%s' % (j), label=r'M=%s' % m,
@@ -756,7 +760,7 @@ class errors:
             ax_1.scatter(100 * self.error_steps, 100 * conf_a[:, 0], color='C%s' % (j), marker='+', zorder=0, s=30,
                          label=r'M=%s' % m)
 
-            a_max = (high - low) / bins * (.5 + c) * (bins - 1 - k) / (2 * c) / payoff_bin
+            a_max = (high - low) / bins * (bins - 1 - k) / (2 * c) / payoff_bin
             bound_down = np.sqrt(data_a[:, 0]) * np.sqrt(a_max - data_a[:, 0]) * z / np.sqrt(shots) / np.sum(
                 1 + 2 * (np.arange(m + 1)))
             bound_up = np.sqrt(data_a[:, 0]) * np.sqrt(a_max - data_a[:, 0]) * z / np.sqrt(shots) / np.sqrt(np.sum(
