@@ -11,7 +11,7 @@ data = (S0, sig, r, T, K)
 
 bins = 8
 max_error_gate = 0.005
-error_name = 'thermal'
+error_name = 'measurement'
 repeats = 100
 measure = False
 thermal = False
