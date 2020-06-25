@@ -48,6 +48,9 @@ def classical_payoff(S0, sig, r, T, K, samples=10000):
 
     return cl_payoff
 
+
+
+
 def KL(p, q):
     """
     Function to compute Kullback-Leibler divergence
