@@ -1,5 +1,4 @@
 import numpy as np
-from scipy.optimize import newton
 from scipy.special import erfinv
 import matplotlib.pyplot as plt
 

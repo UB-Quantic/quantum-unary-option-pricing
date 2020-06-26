@@ -11,55 +11,55 @@ data = (S0, sig, r, T, K)
 
 bins = 8
 max_error_gate = 0.005
-error_name = 'depolarizing'
+error_name = 'measurement'
 repeats = 100
-measure = True
+measure = False
 thermal = False
 steps = 51
-# Crear objeto de errores
+# Create error object
 Err = errors(data, max_error_gate, steps)
 
 Err.paint_cl_payoff(100)
 print('binary')
-#Calcular errores al payoff en binario
+# Compute payoff errors in binary
 #Err.compute_save_errors_binary(bins, error_name, repeats, measure_error=measure, thermal_error=thermal)
 print('unary')
-#Calcular errores al payoff en unario
+# Compute payoff errors in unary
 #Err.compute_save_errors_unary(bins, error_name, repeats, measure_error=measure, thermal_error=thermal)
 
 
 print('paint errors')
-#Pintar los errores, figuras 14 del paper
+#Paint errors corresponding to Fig. 14
 Err.paint_errors(bins, error_name, repeats, measure_error=measure, thermal_error=thermal)
 
 
 print('KL unary')
-#Calcular errores en la distribución de probabilidad en unario
+#Compute errors in probability distribution, unary
 #Err.compute_save_KL_unary(bins, error_name, repeats, measure_error=measure, thermal_error=thermal)
 print('KL binary')
-#Calcular errores en la distribución de probabilidad en binario
+#Compute errors in probability distribution, binary
 #Err.compute_save_KL_binary(bins, error_name, repeats, measure_error=measure, thermal_error=thermal)
 
 print('paint outcomes')
-#Pintar distribuciones de probabilidad en unario y binario, figuras 11 del paper
+#Paint probability distributions, figures 11
 Err.paint_outcomes(bins, error_name, 0.0, repeats, measure_error=measure, thermal_error=thermal)
 Err.paint_outcomes(bins, error_name, 0.001, repeats, measure_error=measure, thermal_error=thermal)
 Err.paint_outcomes(bins, error_name, 0.005, repeats, measure_error=measure, thermal_error=thermal)
 print('paint divergences')
-#Pintar divergencias KL de probabilidad en unario y binario, figura 12 del paper
+#Paint KL divergences in probability distribution, figure 12
 Err.paint_divergences(bins, error_name, repeats, measure_error=measure, thermal_error=thermal)
 
 print('AE unary')
-#Amplitude Estimation unario
+#Amplitude Estimation unary
 #Err.compute_save_errors_unary_amplitude_estimation(bins, error_name, repeats, measure_error=measure, thermal_error=thermal)
 print('AE binary')
-#Amplitude Estimation binario
+#Amplitude Estimation binary
 #Err.compute_save_errors_binary_amplitude_estimation(bins, error_name, repeats, measure_error=measure, thermal_error=thermal)
 
 print('paint AE')
-#Pintar amplitude estimation unario y binario, figuras 15 del paper
+#Unary and Binary Amplitude Estimation, figures 15
 Err.error_emplitude_estimation(bins, error_name, repeats, measure_error=measure, thermal_error=thermal)
-#Pintar errores en el payoff binario y unario, figuras 16 y 17
+#Unary and Binary payoff errors, figures 16, 17
 Err.paint_amplitude_estimation_binary(bins, error_name, repeats, M=4, measure_error=measure, thermal_error=thermal)
 Err.paint_amplitude_estimation_unary(bins, error_name, repeats, M=4, measure_error=measure, thermal_error=thermal)
 

@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 from qiskit import QuantumCircuit, execute, Aer
 from aux_functions import *
 from binary import extract_probability as extract_probability_all_samples
-from scipy.optimize import newton
 
 """
 This file provides all required functions for performing calculations in unary basis
