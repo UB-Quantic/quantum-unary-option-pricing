@@ -1,4 +1,4 @@
-# *[Quantum unary approach to option pricing](https://arxiv.org/abs/1912.01618)
+# *[Quantum unary approach to option pricing](https://arxiv.org/abs/1912.01618)*
 
 #### Sergi Ramos-Calderer, Adrián Pérez-Salinas, Diego García-Martín, Carlos Bravo-Prieto, Jorge Cortada, Jordi Planagumà, and José I. Latorre.
 
