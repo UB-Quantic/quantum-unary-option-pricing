@@ -30,13 +30,13 @@ Ramos-Calderer, S., Pérez-Salinas, A., García-Martín, D., Bravo-Prieto, C., C
 
 BibTeX:
 
-`@misc{ramoscalderer2019quantum,
-    title={Quantum unary approach to option pricing},
-    author={Sergi Ramos-Calderer and Adrián Pérez-Salinas and Diego García-Martín and Carlos Bravo-Prieto and Jorge Cortada and Jordi Planagumà and José I. Latorre},
-    year={2019},
-    eprint={1912.01618},
-    archivePrefix={arXiv},
-    primaryClass={quant-ph}
+`@misc{ramoscalderer2019quantum,\n
+    title={Quantum unary approach to option pricing},\n
+    author={Sergi Ramos-Calderer and Adrián Pérez-Salinas and Diego García-Martín and Carlos Bravo-Prieto and Jorge Cortada and Jordi Planagumà and José I. Latorre},\n
+    year={2019},\n
+    eprint={1912.01618},\n
+    archivePrefix={arXiv},\n
+    primaryClass={quant-ph}\n
 }
 `
 
