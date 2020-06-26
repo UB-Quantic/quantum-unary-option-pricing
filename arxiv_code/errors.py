@@ -4,16 +4,11 @@ import unary as un
 
 from aux_functions import *
 from noise_mapping import *
-from time import time
 import os
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from matplotlib.ticker import AutoMinorLocator
-from qiskit import execute
-from qiskit import Aer
 
-from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
-from qiskit.aqua.components.uncertainty_models import LogNormalDistribution
 
 """
 This file creates the Python class defining all quantities to perform 
@@ -117,7 +112,7 @@ class errors:
         plt.rc('text', usetex=True)
         plt.rc('font', family='serif')
         fig, ax = plt.subplots()
-        ax.scatter(np.arange(2, samples), 100*data, label='Sampling error', marker='x')
+        ax.scatter(np.arange(2, samples), 100*data, label='Discretization error', marker='x')
         ax.set(yscale='log', ylabel=r'Percentage off exact value (\%)', xlabel=r'$\sharp$ bins')
         ax.legend()
         ax.xaxis.set_minor_locator(AutoMinorLocator())
@@ -633,7 +628,10 @@ class errors:
         ax.plot([0, M], [payoff_bin, payoff_bin], c='orangered', ls='--')
         ax.set(xlabel='AE iterations', ylabel='Payoff', xticks=np.arange(0, M + 1), xticklabels=np.arange(0, M + 1))
         ax.legend()
-
+        ax.xaxis.set_minor_locator(AutoMinorLocator())
+        ax.yaxis.set_minor_locator(AutoMinorLocator())
+        ax.tick_params(direction="in", which='major', length=10)
+        ax.tick_params(direction="in", which='minor', length=5)
         fig.savefig(name_folder_data(
             self.data) + '/%s_bins/' % bins + error_name + '_amplitude_estimation_perfect_circuit_results.pdf')
 
@@ -666,10 +664,6 @@ class errors:
                         Line2D([0], [0], color='black', lw=1, ls='-.')]
         bx.legend(custom_lines, ['Unary', 'Binary', 'Cl. sampling', 'Optimal AE'])
         fig.tight_layout()
-        ax.xaxis.set_minor_locator(AutoMinorLocator())
-        ax.yaxis.set_minor_locator(AutoMinorLocator())
-        ax.tick_params(direction="in", which='major', length=10)
-        ax.tick_params(direction="in", which='minor', length=5)
         bx.xaxis.set_minor_locator(AutoMinorLocator())
         bx.tick_params(direction="in", which='major', length=10)
         bx.tick_params(direction="in", which='minor', length=5)

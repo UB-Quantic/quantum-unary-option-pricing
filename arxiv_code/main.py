@@ -11,9 +11,9 @@ data = (S0, sig, r, T, K)
 
 bins = 8
 max_error_gate = 0.005
-error_name = 'measurement'
+error_name = 'depolarizing'
 repeats = 100
-measure = False
+measure = True
 thermal = False
 steps = 51
 # Crear objeto de errores
