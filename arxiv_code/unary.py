@@ -96,13 +96,13 @@ def rw_circuit_inv(qubits, parameters, X=True):
         for i in range(mid, -1, -1):
             #SWAP-Ry gates
             #-------------------------------------------------
-            C.cx(mid-i, mid-i-1)
-            C.cu3(-parameters[mid-i-1], 0, 0, mid-i-1, mid-i)
-            C.cx(mid-i, mid-i-1)
+            C.cx(mid + i, mid + i + 1)
+            C.cu3(-parameters[mid + i], 0, 0, mid + i + 1, mid + i)
+            C.cx(mid + i, mid + i + 1)
             #-------------------------------------------------
-            C.cx(mid+i, mid+i+1)
-            C.cu3(-parameters[mid+i], 0, 0, mid+i+1, mid+i)
-            C.cx(mid+i, mid+i+1)
+            C.cx(mid - i, mid - i - 1)
+            C.cu3(-parameters[mid - i - 1], 0, 0, mid - i - 1, mid - i)
+            C.cx(mid - i, mid - i - 1)
             #-------------------------------------------------
         if X:
             C.x(mid)
@@ -329,7 +329,7 @@ def run_payoff_quantum_sim(qu, qc, shots, S, K, basis_gates, noise_model):
 
     return qu_payoff_sim
 
-def test_inversion_payoff(qu, S0, sig, r, T, K, shots, basis_gates, noise_model):
+'''def test_inversion_payoff(qu, S0, sig, r, T, K, shots, basis_gates, noise_model):
     mu = (r - 0.5 * sig ** 2) * T + np.log(S0)  # Define all the parameters to be used in the computation
     mean = np.exp(
         mu + 0.5 * T * sig ** 2)  # Set the relevant zone of study and create the mapping between qubit and option price, and
@@ -354,7 +354,7 @@ def test_inversion_payoff(qu, S0, sig, r, T, K, shots, basis_gates, noise_model)
     counts_payoff_sim = job_payoff_sim.result().get_counts(qc)
 
 
-    return counts_payoff_sim
+    return counts_payoff_sim'''
 
 def diff_qu_cl(qu_payoff_sim, cl_payoff):
     """
