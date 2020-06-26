@@ -4,15 +4,11 @@ import unary as un
 
 from aux_functions import *
 from noise_mapping import *
-from time import time
 import os
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
-from qiskit import execute
-from qiskit import Aer
+from matplotlib.ticker import AutoMinorLocator
 
-from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
-from qiskit.aqua.components.uncertainty_models import LogNormalDistribution
 
 """
 This file creates the Python class defining all quantities to perform 
@@ -105,6 +101,25 @@ class errors:
 
         return error_name
 
+    def paint_cl_payoff(self, samples):
+        S0, sig, r, T, K = self.data
+        exact = classical_payoff(S0, sig, r, T, K, samples=1000000)
+        data = []
+        for i in range(2, samples):
+            data.append(np.abs(classical_payoff(S0, sig, r, T, K, samples=i) - exact))
+
+        data = np.array(data)
+        plt.rc('text', usetex=True)
+        plt.rc('font', family='serif')
+        fig, ax = plt.subplots()
+        ax.scatter(np.arange(2, samples), 100*data, label='Discretization error', marker='x')
+        ax.set(yscale='log', ylabel=r'Percentage off exact value (\%)', xlabel=r'$\sharp$ bins')
+        ax.legend()
+        ax.xaxis.set_minor_locator(AutoMinorLocator())
+        ax.tick_params(direction="in", which='major', length=10)
+        ax.tick_params(direction="in", which='minor', length=5)
+        fig.savefig(name_folder_data(
+            self.data) + '/classical_payoff_%s.pdf'%samples, bbox_inches='tight')
 
     def compute_save_errors_binary(self, bins, error_name, repeats, measure_error=False, thermal_error=False, shots=10000):
         """
@@ -195,19 +210,25 @@ class errors:
         maxs_binary = matrix_binary[:, int(-(bounds) * (repeats)-1)]
         means_binary = np.mean(matrix_binary, axis=1)
 
+        plt.rc('text', usetex=True)
+        plt.rc('font', family='serif')
         fig, ax = plt.subplots()
         ax.scatter(100 * self.error_steps, means_unary, s=20, color='C0', label='unary', marker='x')
         ax.scatter(100 * self.error_steps, means_binary, s=20, color='C1', label='binary', marker='+')
         ax.fill_between(100 * self.error_steps, maxs_unary, mins_unary, alpha=0.2, facecolor='C0')
         ax.fill_between(100 * self.error_steps, maxs_binary, mins_binary, alpha=0.2, facecolor='C1')
         ax.set(ylim=[0, 50])
-        plt.ylabel('percentage off classical value (%)')
-        plt.xlabel('single-qubit gate error (%)')
+        plt.ylabel('percentage off classical value (\%)')
+        plt.xlabel('single-qubit gate error (\%)')
         ax.legend()
         fig.tight_layout()
+        ax.xaxis.set_minor_locator(AutoMinorLocator())
+        ax.yaxis.set_minor_locator(AutoMinorLocator())
+        ax.tick_params(direction="in", which='major', length=10)
+        ax.tick_params(direction="in", which='minor', length=5)
         fig.savefig(name_folder_data(self.data) + '/%s_bins/' % bins
                                   + error_name + '_gate(%s)_steps(%s)_repeats(%s).pdf' % (
-                                  self.max_gate_error, self.steps, repeats))
+                                  self.max_gate_error, self.steps, repeats), bbox_inches='tight')
 
 
     def compute_save_outcomes_binary(self, bins, error_name, error_value, repeats, measure_error=False, thermal_error=False, shots=10000):
@@ -304,6 +325,8 @@ class errors:
         mu = (self.r - 0.5 * self.sig ** 2) * self.T + np.log(self.S0)
         exact_pdf = log_normal(exact_values, mu, self.sig * np.sqrt(self.T))
         exact_pdf = exact_pdf * pdf[0] / exact_pdf[0]
+        plt.rc('text', usetex=True)
+        plt.rc('font', family='serif')
         fig, ax = plt.subplots()
 
         ax.bar(values + width / 4, maxs_binary, width / 2, alpha=0.3, color='C1')
@@ -318,9 +341,13 @@ class errors:
         plt.xlabel('Option price')
         ax.legend()
         fig.tight_layout()
+        ax.xaxis.set_minor_locator(AutoMinorLocator())
+        ax.yaxis.set_minor_locator(AutoMinorLocator())
+        ax.tick_params(direction="in", which='major', length=10)
+        ax.tick_params(direction="in", which='minor', length=5)
         fig.savefig(name_folder_data(self.data) + '/%s_bins/' % bins
                     + error_name + '_gate(%s)_repeats(%s)_probs.pdf' % (
-                        error_value, repeats))
+                        error_value, repeats), bbox_inches='tight')
 
     def compute_save_KL_binary(self, bins, error_name, repeats, measure_error=False, thermal_error=False, shots=10000):
         """
@@ -410,19 +437,24 @@ class errors:
         maxs_binary = matrix_binary[:, int(-(bounds) * (repeats)-1)]
         means_binary = np.mean(matrix_binary, axis=1)
 
+        plt.rc('text', usetex=True)
+        plt.rc('font', family='serif')
         fig, ax = plt.subplots()
         ax.scatter(100 * self.error_steps, means_unary, s=20, color='C0', label='unary', marker='x')
         ax.scatter(100 * self.error_steps, means_binary, s=20, color='C1', label='binary', marker='+')
         ax.fill_between(100 * self.error_steps, maxs_unary, mins_unary, alpha=0.2, facecolor='C0')
         ax.fill_between(100 * self.error_steps, maxs_binary, mins_binary, alpha=0.2, facecolor='C1')
         plt.ylabel('KL Divergence')
-        plt.xlabel('single-qubit gate error (%)')
+        plt.xlabel('single-qubit gate error (\%)')
         plt.yscale('log')
         ax.legend()
         fig.tight_layout()
+        ax.xaxis.set_minor_locator(AutoMinorLocator())
+        ax.tick_params(direction="in", which='major', length=10)
+        ax.tick_params(direction="in", which='minor', length=5)
         fig.savefig(name_folder_data(self.data) + '/%s_bins/' % bins
                                   + error_name + '_gate(%s)_steps(%s)_repeats(%s)_div.pdf' % (
-                                  self.max_gate_error, self.steps, repeats))
+                                  self.max_gate_error, self.steps, repeats), bbox_inches='tight')
 
     def compute_save_errors_binary_amplitude_estimation(self, bins, error_name, repeats, M=4, measure_error=False
                                                         , thermal_error=False, shots=500):
@@ -547,7 +579,8 @@ class errors:
         (values, pdf) = un.get_pdf(bins, self.S0, self.sig, self.r, self.T)[0]
         a_un = np.sum(pdf[values >= self.K] * (values[values >= self.K] - self.K))
         error_name = self.change_name(error_name, measure_error, thermal_error)
-
+        plt.rc('text', usetex=True)
+        plt.rc('font', family='serif')
         fig, ax = plt.subplots()
         un_data = np.empty(M+1)
         un_conf = np.empty(M + 1)
@@ -595,7 +628,10 @@ class errors:
         ax.plot([0, M], [payoff_bin, payoff_bin], c='orangered', ls='--')
         ax.set(xlabel='AE iterations', ylabel='Payoff', xticks=np.arange(0, M + 1), xticklabels=np.arange(0, M + 1))
         ax.legend()
-
+        ax.xaxis.set_minor_locator(AutoMinorLocator())
+        ax.yaxis.set_minor_locator(AutoMinorLocator())
+        ax.tick_params(direction="in", which='major', length=10)
+        ax.tick_params(direction="in", which='minor', length=5)
         fig.savefig(name_folder_data(
             self.data) + '/%s_bins/' % bins + error_name + '_amplitude_estimation_perfect_circuit_results.pdf')
 
@@ -628,9 +664,11 @@ class errors:
                         Line2D([0], [0], color='black', lw=1, ls='-.')]
         bx.legend(custom_lines, ['Unary', 'Binary', 'Cl. sampling', 'Optimal AE'])
         fig.tight_layout()
-
+        bx.xaxis.set_minor_locator(AutoMinorLocator())
+        bx.tick_params(direction="in", which='major', length=10)
+        bx.tick_params(direction="in", which='minor', length=5)
         fig.savefig(name_folder_data(
-                self.data) + '/%s_bins/' % bins + error_name + '_amplitude_estimation_perfect_circuit_error.pdf')
+                self.data) + '/%s_bins/' % bins + error_name + '_amplitude_estimation_perfect_circuit_error.pdf', bbox_inches='tight')
 
 
 
@@ -652,6 +690,8 @@ class errors:
         payoff_un = np.sum(pdf[values >= self.K] * (values[values >= self.K] - self.K))
         error_name = self.change_name(error_name, measure_error, thermal_error)
         m_s = np.arange(0, M + 1, 1)
+        plt.rc('text', usetex=True)
+        plt.rc('font', family='serif')
         fig_0, ax_0 = plt.subplots()
         fig_1, ax_1 = plt.subplots()
         custom_lines=[]
@@ -686,20 +726,27 @@ class errors:
             ax_1.plot(100 * self.error_steps, 100*bound_down, ls='-.', color='C%s' % (j), zorder=2)
             ax_1.plot(100 * self.error_steps, 100*bound_up, ls=':', color='C%s' % (j), zorder=2)
 
-        ax_0.set(xlabel='single-qubit gate error (%)', ylabel='percentage off optimal payoff (%)', ylim=[0, 175])
-        ax_1.set(xlabel='single-qubit gate error (%)', ylabel='$\Delta$ payoff (%)', ylim=[0.05, 50], yscale='log')
+        ax_0.set(xlabel='single-qubit gate error (\%)', ylabel='percentage off optimal payoff (\%)', ylim=[0, 175])
+        ax_1.set(xlabel='single-qubit gate error (\%)', ylabel='$\Delta$ payoff (\%)', ylim=[0.05, 50], yscale='log')
         ax_0.legend(loc='upper left')
         custom_lines.append(Line2D([0], [0], color='black', lw=1, ls=':'))
         custom_lines.append(Line2D([0], [0], color='black', lw=1, ls='-.'))
         ax_1.legend(custom_lines, [r'M=%s' % m for m in m_s] + ['Cl. sampling', 'Optimal AE'])
         fig_0.tight_layout()
         fig_1.tight_layout()
+        ax_0.xaxis.set_minor_locator(AutoMinorLocator())
+        ax_0.yaxis.set_minor_locator(AutoMinorLocator())
+        ax_0.tick_params(direction="in", which='major', length=10)
+        ax_0.tick_params(direction="in", which='minor', length=5)
+        ax_1.xaxis.set_minor_locator(AutoMinorLocator())
+        ax_1.tick_params(direction="in", which='major', length=10)
+        ax_1.tick_params(direction="in", which='minor', length=5)
         fig_0.savefig(name_folder_data(
                 self.data) + '/%s_bins/unary/amplitude_estimation/' % bins + error_name + '_gate(%s)_steps(%s)_repeats(%s)_data.pdf' % (
-                            self.max_gate_error, self.steps, repeats))
+                            self.max_gate_error, self.steps, repeats), bbox_inches='tight')
         fig_1.savefig(name_folder_data(
             self.data) + '/%s_bins/unary/amplitude_estimation/' % bins + error_name + '_gate(%s)_steps(%s)_repeats(%s)_sample_error.pdf' % (
-                          self.max_gate_error, self.steps, repeats))
+                          self.max_gate_error, self.steps, repeats), bbox_inches='tight')
 
 
     def paint_amplitude_estimation_binary(self, bins, error_name, repeats, M=4, measure_error=False,
@@ -720,6 +767,8 @@ class errors:
         z = erfinv(1 - alpha / 2)
         error_name = self.change_name(error_name, measure_error, thermal_error)
         m_s = np.arange(0, M + 1, 1)
+        plt.rc('text', usetex=True)
+        plt.rc('font', family='serif')
         fig_0, ax_0 = plt.subplots()
         fig_1, ax_1 = plt.subplots()
         custom_lines=[]
@@ -768,8 +817,8 @@ class errors:
             ax_1.plot(100 * self.error_steps, 100 * bound_down, ls='-.', color='C%s' % (j), zorder=2)
             ax_1.plot(100 * self.error_steps, 100 * bound_up, ls=':', color='C%s' % (j), zorder=2)
 
-        ax_0.set(xlabel='single-qubit gate error (%)', ylabel='percentage off optimal payoff (%)', ylim=[0, 175])
-        ax_1.set(xlabel='single-qubit gate error (%)', ylabel='$\Delta$ payoff (%)', ylim=[0.05, 50],
+        ax_0.set(xlabel='single-qubit gate error (\%)', ylabel='percentage off optimal payoff (\%)', ylim=[0, 175])
+        ax_1.set(xlabel='single-qubit gate error (\%)', ylabel='$\Delta$ payoff (\%)', ylim=[0.05, 50],
                  yscale='log')
         ax_0.legend(loc='upper left')
         custom_lines.append(Line2D([0], [0], color='black', lw=1, ls=':'))
@@ -777,10 +826,17 @@ class errors:
         ax_1.legend(custom_lines, [r'M=%s' % m for m in m_s] + ['Cl. sampling', 'Optimal AE'])
         fig_0.tight_layout()
         fig_1.tight_layout()
+        ax_0.xaxis.set_minor_locator(AutoMinorLocator())
+        ax_0.yaxis.set_minor_locator(AutoMinorLocator())
+        ax_0.tick_params(direction="in", which='major', length=10)
+        ax_0.tick_params(direction="in", which='minor', length=5)
+        ax_1.xaxis.set_minor_locator(AutoMinorLocator())
+        ax_1.tick_params(direction="in", which='major', length=10)
+        ax_1.tick_params(direction="in", which='minor', length=5)
         fig_0.savefig(name_folder_data(
                 self.data) + '/%s_bins/binary/amplitude_estimation/' % bins + error_name + '_gate(%s)_steps(%s)_repeats(%s)_data.pdf' % (
-                            self.max_gate_error, self.steps, repeats))
+                            self.max_gate_error, self.steps, repeats), bbox_inches='tight')
         fig_1.savefig(name_folder_data(
             self.data) + '/%s_bins/binary/amplitude_estimation/' % bins + error_name + '_gate(%s)_steps(%s)_repeats(%s)_sample_error.pdf' % (
-                          self.max_gate_error, self.steps, repeats))
+                          self.max_gate_error, self.steps, repeats), bbox_inches='tight')
 
