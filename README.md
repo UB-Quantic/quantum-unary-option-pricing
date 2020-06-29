@@ -3,7 +3,7 @@
 #### Sergi Ramos-Calderer, Adrián Pérez-Salinas, Diego García-Martín, Carlos Bravo-Prieto, Jorge Cortada, Jordi Planagumà, and José I. Latorre.
 
 
-This is a repository for all code written for the article "*Quantum unary approach to option pricing*. 
+This is a repository for all code written for the article *Quantum unary approach to option pricing*. 
 
 It gives numerical simulations of the quantum classifier in [arXiv: 1912.01618](https://arxiv.org/abs/1912.01618).
 
