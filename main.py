@@ -9,13 +9,13 @@ r = 0.05
 T = 0.1
 data = (S0, sig, r, T, K)
 
-bins = 8
+bins = 16
 max_error_gate = 0.005
 error_name = 'measurement'
-repeats = 100
+repeats = 10
 measure = False
 thermal = False
-steps = 51
+steps = 6
 # Create error object
 Err = errors(data, max_error_gate, steps)
 
