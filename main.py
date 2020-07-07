@@ -11,9 +11,9 @@ data = (S0, sig, r, T, K)
 
 bins = 16
 max_error_gate = 0.005
-error_name = 'measurement'
+error_name = 'depolarizing'
 repeats = 10
-measure = False
+measure = True
 thermal = False
 steps = 6
 # Create error object
@@ -22,10 +22,10 @@ Err = errors(data, max_error_gate, steps)
 Err.paint_cl_payoff(100)
 print('binary')
 # Compute payoff errors in binary
-#Err.compute_save_errors_binary(bins, error_name, repeats, measure_error=measure, thermal_error=thermal)
+Err.compute_save_errors_binary(bins, error_name, repeats, measure_error=measure, thermal_error=thermal)
 print('unary')
 # Compute payoff errors in unary
-#Err.compute_save_errors_unary(bins, error_name, repeats, measure_error=measure, thermal_error=thermal)
+Err.compute_save_errors_unary(bins, error_name, repeats, measure_error=measure, thermal_error=thermal)
 
 
 print('paint errors')
@@ -35,10 +35,10 @@ Err.paint_errors(bins, error_name, repeats, measure_error=measure, thermal_error
 
 print('KL unary')
 #Compute errors in probability distribution, unary
-#Err.compute_save_KL_unary(bins, error_name, repeats, measure_error=measure, thermal_error=thermal)
+Err.compute_save_KL_unary(bins, error_name, repeats, measure_error=measure, thermal_error=thermal)
 print('KL binary')
 #Compute errors in probability distribution, binary
-#Err.compute_save_KL_binary(bins, error_name, repeats, measure_error=measure, thermal_error=thermal)
+Err.compute_save_KL_binary(bins, error_name, repeats, measure_error=measure, thermal_error=thermal)
 
 print('paint outcomes')
 #Paint probability distributions, figures 11
@@ -51,10 +51,10 @@ Err.paint_divergences(bins, error_name, repeats, measure_error=measure, thermal_
 
 print('AE unary')
 #Amplitude Estimation unary
-#Err.compute_save_errors_unary_amplitude_estimation(bins, error_name, repeats, measure_error=measure, thermal_error=thermal)
+Err.compute_save_errors_unary_amplitude_estimation(bins, error_name, repeats, measure_error=measure, thermal_error=thermal)
 print('AE binary')
 #Amplitude Estimation binary
-#Err.compute_save_errors_binary_amplitude_estimation(bins, error_name, repeats, measure_error=measure, thermal_error=thermal)
+Err.compute_save_errors_binary_amplitude_estimation(bins, error_name, repeats, measure_error=measure, thermal_error=thermal)
 
 print('paint AE')
 #Unary and Binary Amplitude Estimation, figures 15
