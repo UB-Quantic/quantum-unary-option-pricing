@@ -109,7 +109,7 @@ class errors:
             data.append(np.abs(classical_payoff(S0, sig, r, T, K, samples=i) - exact))
 
         data = np.array(data)
-        plt.rc('text', usetex=True)
+        # plt.rc('text', usetex=True)
         plt.rc('font', family='serif')
         fig, ax = plt.subplots()
         ax.scatter(np.arange(2, samples), 100*data, label='Discretization error', marker='x')
@@ -210,7 +210,7 @@ class errors:
         maxs_binary = matrix_binary[:, int(-(bounds) * (repeats)-1)]
         means_binary = np.mean(matrix_binary, axis=1)
 
-        plt.rc('text', usetex=True)
+        # plt.rc('text', usetex=True)
         plt.rc('font', family='serif')
         fig, ax = plt.subplots()
         ax.scatter(100 * self.error_steps, means_unary, s=20, color='C0', label='unary', marker='x')
@@ -325,7 +325,7 @@ class errors:
         mu = (self.r - 0.5 * self.sig ** 2) * self.T + np.log(self.S0)
         exact_pdf = log_normal(exact_values, mu, self.sig * np.sqrt(self.T))
         exact_pdf = exact_pdf * pdf[0] / exact_pdf[0]
-        plt.rc('text', usetex=True)
+        # plt.rc('text', usetex=True)
         plt.rc('font', family='serif')
         fig, ax = plt.subplots()
 
@@ -437,7 +437,7 @@ class errors:
         maxs_binary = matrix_binary[:, int(-(bounds) * (repeats)-1)]
         means_binary = np.mean(matrix_binary, axis=1)
 
-        plt.rc('text', usetex=True)
+        # plt.rc('text', usetex=True)
         plt.rc('font', family='serif')
         fig, ax = plt.subplots()
         ax.scatter(100 * self.error_steps, means_unary, s=20, color='C0', label='unary', marker='x')
@@ -579,7 +579,7 @@ class errors:
         (values, pdf) = un.get_pdf(bins, self.S0, self.sig, self.r, self.T)[0]
         a_un = np.sum(pdf[values >= self.K] * (values[values >= self.K] - self.K))
         error_name = self.change_name(error_name, measure_error, thermal_error)
-        plt.rc('text', usetex=True)
+        # plt.rc('text', usetex=True)
         plt.rc('font', family='serif')
         fig, ax = plt.subplots()
         un_data = np.empty(M+1)
@@ -690,7 +690,7 @@ class errors:
         payoff_un = np.sum(pdf[values >= self.K] * (values[values >= self.K] - self.K))
         error_name = self.change_name(error_name, measure_error, thermal_error)
         m_s = np.arange(0, M + 1, 1)
-        plt.rc('text', usetex=True)
+        # plt.rc('text', usetex=True)
         plt.rc('font', family='serif')
         fig_0, ax_0 = plt.subplots()
         fig_1, ax_1 = plt.subplots()
@@ -767,7 +767,7 @@ class errors:
         z = erfinv(1 - alpha / 2)
         error_name = self.change_name(error_name, measure_error, thermal_error)
         m_s = np.arange(0, M + 1, 1)
-        plt.rc('text', usetex=True)
+        # plt.rc('text', usetex=True)
         plt.rc('font', family='serif')
         fig_0, ax_0 = plt.subplots()
         fig_1, ax_1 = plt.subplots()
