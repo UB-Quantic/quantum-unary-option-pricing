@@ -43,7 +43,8 @@ def rw_circuit(qubits, parameters, X=True):
             #-------------------------------------------------
     else:
         mid = int((qubits-1)/2) #The random walk starts from the middle qubit
-        C.x(mid)
+        if X:
+            C.x(mid)
         for i in range(mid):
             #SWAP-Ry gates
             #-------------------------------------------------
@@ -57,7 +58,7 @@ def rw_circuit(qubits, parameters, X=True):
             #-------------------------------------------------
     return C
 
-def rw_circuit_inv(qubits, parameters, X=True):
+def rw_circuit_inv(qubits, parameters):
     """
     Circuit that emulates the probability sharing between neighbours seen usually
     in Brownian motion and stochastic systems, INVERTED!
@@ -87,12 +88,9 @@ def rw_circuit_inv(qubits, parameters, X=True):
         C.cu3(-parameters[mid0], 0, 0, mid0, mid1)
         C.cx(mid1, mid0)
 
-        if X:
-            C.x(mid1)
-
     else:
         mid = int((qubits-1)/2) #The random walk starts from the middle qubit
-        for i in range(mid, -1, -1):
+        for i in range(mid - 1, -1, -1):
             #SWAP-Ry gates
             #-------------------------------------------------
             C.cx(mid + i, mid + i + 1)
@@ -103,8 +101,6 @@ def rw_circuit_inv(qubits, parameters, X=True):
             C.cu3(-parameters[mid - i - 1], 0, 0, mid - i - 1, mid - i)
             C.cx(mid - i, mid - i - 1)
             #-------------------------------------------------
-        if X:
-            C.x(mid)
 
     return C
 
@@ -427,7 +423,7 @@ def load_Q_operator(qu, depth, S0, sig, r, T, K):
     prob_loading = rw_circuit(qu,
                                     lognormal_parameters, X=False)
     prob_loading_inv = rw_circuit_inv(qu,
-                              lognormal_parameters, X=False)
+                              lognormal_parameters)
     payoff = payoff_circuit(qu, K, S)
     payoff_inv = payoff_circuit_inv(qu, K, S)
 
