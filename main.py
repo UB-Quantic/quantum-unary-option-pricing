@@ -1,6 +1,10 @@
 from errors import errors
 import unary as un
+import argparse
 
+parser = argparse.ArgumentParser()
+parser.add_argument("--bins", default=10, type=int)
+args = vars(parser.parse_args())
 
 S0 = 2
 K = 1.9
@@ -9,7 +13,7 @@ r = 0.05
 T = 0.1
 data = (S0, sig, r, T, K)
 
-bins = 13
+bins = args.get('bins')
 max_error_gate = 0.005
 error_name = 'depolarizing'
 repeats = 10
