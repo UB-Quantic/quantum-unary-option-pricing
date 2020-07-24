@@ -9,7 +9,9 @@ r = 0.05
 T = 0.1
 data = (S0, sig, r, T, K)
 
-bins = 16
+bins = 8
+#bins_list = list(range(9, 17, 1))
+#print(bins_list)
 max_error_gate = 0.005
 error_name = 'depolarizing'
 repeats = 10
@@ -31,7 +33,6 @@ Err.compute_save_errors_unary(bins, error_name, repeats, measure_error=measure, 
 print('paint errors')
 #Paint errors corresponding to Fig. 14
 Err.paint_errors(bins, error_name, repeats, measure_error=measure, thermal_error=thermal)
-
 
 print('KL unary')
 #Compute errors in probability distribution, unary
@@ -62,6 +63,8 @@ Err.error_emplitude_estimation(bins, error_name, repeats, measure_error=measure,
 #Unary and Binary payoff errors, figures 16, 17
 Err.paint_amplitude_estimation_binary(bins, error_name, repeats, M=4, measure_error=measure, thermal_error=thermal)
 Err.paint_amplitude_estimation_unary(bins, error_name, repeats, M=4, measure_error=measure, thermal_error=thermal)
+
+#Err.paint_AE_unary_run_bins(bins_list, error_name, repeats, measure_error=measure)
 
 
 
