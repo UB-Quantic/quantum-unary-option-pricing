@@ -121,7 +121,7 @@ class errors:
         fig.savefig(name_folder_data(
             self.data) + '/classical_payoff_%s.pdf'%samples, bbox_inches='tight')
 
-    def compute_save_errors_binary(self, bins, error_name, repeats, measure_error=False, thermal_error=False, shots=10000):
+    def compute_save_errors_binary(self, bins, error_name, repeats, measure_error=False, thermal_error=False, shots=10000, error_c=0.05):
         """
         Function to compute and save errors in the binary case without amplitude estimation, for noisy circuits
         :param bins: Number of bins desired
@@ -140,7 +140,7 @@ class errors:
         for i, error in enumerate(self.error_steps):
             noise_model = noise(error, measure=measure_error, thermal=thermal_error)
             basis_gates = noise_model.basis_gates
-            c, k, high, low, qc = bin.load_payoff_quantum_sim(qubits, self.S0, self.sig, self.r, self.T, self.K)
+            c, k, high, low, qc = bin.load_payoff_quantum_sim(qubits, self.S0, self.sig, self.r, self.T, self.K, error=error_c)
             for r in range(repeats):
                 qu_payoff_sim = bin.run_payoff_quantum_sim(qubits, c, k, high, low, qc, shots, basis_gates, noise_model)
                 diff = bin.diff_qu_cl(qu_payoff_sim, self.cl_payoff)
@@ -457,7 +457,7 @@ class errors:
                                   self.max_gate_error, self.steps, repeats), bbox_inches='tight')
 
     def compute_save_errors_binary_amplitude_estimation(self, bins, error_name, repeats, M=4, measure_error=False
-                                                        , thermal_error=False, shots=500):
+                                                        , thermal_error=False, shots=500, error_c=0.05):
         """
         Function to compute and save errors in the binary case for amplitude estimation, for noisy circuits
         :param bins: Number of bins desired
@@ -482,7 +482,7 @@ class errors:
             noise_model = noise(error, measure=measure_error, thermal=thermal_error)
             basis_gates = noise_model.basis_gates
             for j, m in enumerate(m_s):
-                qc = bin.load_Q_operator(qubits, m, self.S0, self.sig, self.r, self.T, self.K)[0]
+                qc = bin.load_Q_operator(qubits, m, self.S0, self.sig, self.r, self.T, self.K, error=error_c)[0]
                 circuits[j] = qc
 
             for r in range(repeats):

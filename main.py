@@ -4,6 +4,7 @@ import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--bins", default=10, type=int)
+parser.add_argument("--error_c", default=0.05, type=float)
 args = vars(parser.parse_args())
 
 S0 = 2
@@ -14,6 +15,7 @@ T = 0.1
 data = (S0, sig, r, T, K)
 
 bins = args.get('bins')
+error_c = args.get('error_c')
 max_error_gate = 0.005
 error_name = 'depolarizing'
 repeats = 10
@@ -26,7 +28,7 @@ Err = errors(data, max_error_gate, steps)
 #Err.paint_cl_payoff(100)
 #print('binary')
 # Compute payoff errors in binary
-#Err.compute_save_errors_binary(bins, error_name, repeats, measure_error=measure, thermal_error=thermal)
+#Err.compute_save_errors_binary(bins, error_name, repeats, measure_error=measure, thermal_error=thermal, error_c=error_c)
 #print('unary')
 # Compute payoff errors in unary
 #Err.compute_save_errors_unary(bins, error_name, repeats, measure_error=measure, thermal_error=thermal)
@@ -58,7 +60,7 @@ print('AE unary')
 Err.compute_save_errors_unary_amplitude_estimation(bins, error_name, repeats, measure_error=measure, thermal_error=thermal)
 #print('AE binary')
 #Amplitude Estimation binary
-#Err.compute_save_errors_binary_amplitude_estimation(bins, error_name, repeats, measure_error=measure, thermal_error=thermal)
+#Err.compute_save_errors_binary_amplitude_estimation(bins, error_name, repeats, measure_error=measure, thermal_error=thermal, error_c=error_c)
 
 print('paint AE')
 #Unary and Binary Amplitude Estimation, figures 15
