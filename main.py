@@ -65,7 +65,7 @@ print('paint AE')
 #Err.error_emplitude_estimation(bins, error_name, repeats, measure_error=measure, thermal_error=thermal)
 #Unary and Binary payoff errors, figures 16, 17
 #Err.paint_amplitude_estimation_binary(bins, error_name, repeats, M=4, measure_error=measure, thermal_error=thermal)
-Err.paint_amplitude_estimation_unary(bins, error_name, repeats, M=4, measure_error=measure, thermal_error=thermal)
+Err.paint_amplitude_estimation_binary(bins, error_name, repeats, M=4, measure_error=measure, thermal_error=thermal)
 
 
 

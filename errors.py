@@ -562,7 +562,7 @@ class errors:
                        self.max_gate_error, self.steps, repeats, m), confidence[j])
 
     def error_emplitude_estimation(self, bins, error_name, repeats, M=4, measure_error=False, thermal_error=False,
-                                   shots=500, alpha=0.05, u=0, e=0.05):
+                                   shots=500, alpha=0.05, u=0, error=0.05):
         """
         Function to paint outcomes and errors for amplitude estimation
         :param bins:
@@ -607,7 +607,7 @@ class errors:
         (values, pdf) = bin.get_pdf(bins, self.S0, self.sig, self.r, self.T)[1]
         high, low = np.max(values), np.min(values)
         k = int(np.floor(bins * (self.K - low) / (high - low)))
-        c = (2 * e) ** (1 / (2 * u + 2))
+        c = (2 * error) ** (1 / (2 * u + 2))
         payoff_bin = (high - low) / bins * (a_bin - .5 + c) * (bins - 1 - k) / (2 * c)
         '''
         a_bin must be calculated in this way because the error allowed in the payoff detracts the precision 
@@ -750,7 +750,7 @@ class errors:
 
 
     def paint_amplitude_estimation_binary(self, bins, error_name, repeats, M=4, measure_error=False,
-                                         thermal_error=False, shots=500, alpha=0.05, u=0, e=0.05):
+                                         thermal_error=False, shots=500, alpha=0.05, u=0, error=0.05):
         """
         Function to paint error and confidences for amplitude estimation in the binary case
         :param bins:
@@ -775,7 +775,7 @@ class errors:
         (values, pdf) = bin.get_pdf(bins, self.S0, self.sig, self.r, self.T)[1]
         high, low = np.max(values), np.min(values)
         k = int(np.floor(bins * (self.K - low) / (high - low)))
-        c = (2 * e) ** (1 / (2 * u + 2))
+        c = (2 * error) ** (1 / (2 * u + 2))
         for j, m in enumerate(m_s):
             a = np.loadtxt(name_folder_data(
                 self.data) + '/%s_bins/binary/amplitude_estimation/' % bins + error_name + '_gate(%s)_steps(%s)_repeats(%s)_M(%s).npz' % (
