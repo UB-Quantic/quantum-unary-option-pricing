@@ -916,8 +916,90 @@ class errors:
         ax_1.tick_params(direction="in", which='major', length=10)
         ax_1.tick_params(direction="in", which='minor', length=5)
         fig_0.savefig(name_folder_data(
-            self.data) + '/' + error_name + '_gate(%s)_step(%s)_repeats(%s)_data.pdf' % (
+            self.data) + '/' + error_name + 'unary_gate(%s)_step(%s)_repeats(%s)_data.pdf' % (
                           self.max_gate_error, step, repeats), bbox_inches='tight')
         fig_1.savefig(name_folder_data(
-            self.data) + '/' + error_name + '_gate(%s)_step(%s)_repeats(%s)_sample_error.pdf' % (
+            self.data) + '/' + error_name + 'unary_gate(%s)_step(%s)_repeats(%s)_sample_error.pdf' % (
+                          self.max_gate_error, step, repeats), bbox_inches='tight')
+
+    def paint_AE_binary_run_bins(self, bins_list, error_name, repeats, M=4, step=3,
+                                measure_error=False, thermal_error=False, shots=500, alpha=0.05):
+        z = erfinv(1 - alpha / 2)
+        error_name = self.change_name(error_name, measure_error, thermal_error)
+        m_s = np.arange(0, M + 1, 1)
+        plt.rc('text', usetex=True)
+        plt.rc('font', family='serif')
+        fig_0, ax_0 = plt.subplots()
+        fig_1, ax_1 = plt.subplots()
+        custom_lines=[]
+
+        for j, m in enumerate(m_s):
+            data = np.empty((len(bins_list), 2))
+            data_a = np.empty((len(bins_list), 2))
+            conf = np.empty((len(bins_list), 2))
+            conf_a = np.empty((len(bins_list), 2))
+            i=0
+            bound_down = np.zeros((len(bins_list), len(m_s)))
+            bound_up = np.zeros((len(bins_list), len(m_s)))
+            for bins in bins_list:
+                (values, pdf) = un.get_pdf(bins, self.S0, self.sig, self.r, self.T)[0]
+                payoff_un = np.sum(pdf[values >= self.K] * (values[values >= self.K] - self.K))
+
+                payoff = np.loadtxt(name_folder_data(
+                    self.data) + '/%s_bins/binary/amplitude_estimation/' % bins + error_name + '_gate(%s)_steps(%s)_repeats(%s)_M(%s).npz' % (
+                                        self.max_gate_error, self.steps, repeats, m)) * (np.max(values) - self.K)
+                payoff_confidences = np.loadtxt(name_folder_data(
+                    self.data) + '/%s_bins/binary/amplitude_estimation/' % bins + error_name + '_gate(%s)_steps(%s)_repeats(%s)_M(%s)_confidence.npz' % (
+                                                    self.max_gate_error, self.steps, repeats, m)) * (
+                                                 np.max(values) - self.K)
+
+                data[i], conf[i] = experimental_data(np.abs(payoff[step] - payoff_un) / payoff_un,
+                                                     payoff_confidences[step] / payoff_un)
+                data_a[i], conf_a[i] = experimental_data(payoff[step] / payoff_un, payoff_confidences[step] / payoff_un)
+
+                a_max = (np.max(values) - self.K) / payoff_un
+                bound_down[i, m] = np.sqrt(data_a[i, 0]) * np.sqrt(a_max - data_a[i, 0]) * z / np.sqrt(shots) / np.sum(
+                    1 + 2 * (np.arange(m + 1)))
+                bound_up[i, m] = np.sqrt(data_a[i, 0]) * np.sqrt(a_max - data_a[i, 0]) * z / np.sqrt(shots) / np.sqrt(np.sum(
+                    1 + 2 * (np.arange(m + 1))))
+                i += 1
+
+            ax_0.scatter(bins_list, 100 * (data[:, 0]), color='C%s' % (j), label=r'M=%s' % m,
+                         marker='x')
+            ax_0.fill_between(bins_list, 100 * (data[:, 0] - data[:, 1]),
+                              100 * (data[:, 0] + data[:, 1]), color='C%s' % (j), alpha=0.3)
+
+            custom_lines.append(Line2D([0], [0], color='C%s' % (j), lw=0, marker='x'))
+
+            ax_1.scatter(bins_list, 100 * conf_a[:, 0], color='C%s' % (j), marker='+', zorder=0, s=30,
+                         label=r'M=%s' % m)
+            a_max = (np.max(values) - self.K) / payoff_un
+            bound_down = np.sqrt(data_a[:, 0]) * np.sqrt(a_max - data_a[:, 0]) * z / np.sqrt(shots) / np.sum(
+                1 + 2 * (np.arange(m + 1)))
+            bound_up = np.sqrt(data_a[:, 0]) * np.sqrt(a_max - data_a[:, 0]) * z / np.sqrt(shots) / np.sqrt(np.sum(
+                1 + 2 * (np.arange(m + 1))))
+            ax_1.plot(bins_list, 100 * bound_down, ls='-.', color='C%s' % (j), zorder=2)
+            ax_1.plot(bins_list, 100 * bound_up, ls=':', color='C%s' % (j), zorder=2)
+
+        ax_0.set(xlabel='Bins', ylabel='percentage off optimal payoff (\%)', ylim=[0, 100])
+        ax_1.set(xlabel='Bins', ylabel='$\Delta$ payoff (\%)', ylim=[0.05, 50],
+                 yscale='log')
+        ax_0.legend(loc='upper left')
+        custom_lines.append(Line2D([0], [0], color='black', lw=1, ls=':'))
+        custom_lines.append(Line2D([0], [0], color='black', lw=1, ls='-.'))
+        ax_1.legend(custom_lines, [r'M=%s' % m for m in m_s] + ['Cl. sampling', 'Optimal AE'])
+        fig_0.tight_layout()
+        fig_1.tight_layout()
+        ax_0.xaxis.set_minor_locator(AutoMinorLocator())
+        ax_0.yaxis.set_minor_locator(AutoMinorLocator())
+        ax_0.tick_params(direction="in", which='major', length=10)
+        ax_0.tick_params(direction="in", which='minor', length=5)
+        ax_1.xaxis.set_minor_locator(AutoMinorLocator())
+        ax_1.tick_params(direction="in", which='major', length=10)
+        ax_1.tick_params(direction="in", which='minor', length=5)
+        fig_0.savefig(name_folder_data(
+            self.data) + '/' + error_name + 'binary_gate(%s)_step(%s)_repeats(%s)_data.pdf' % (
+                          self.max_gate_error, step, repeats), bbox_inches='tight')
+        fig_1.savefig(name_folder_data(
+            self.data) + '/' + error_name + 'binary_gate(%s)_step(%s)_repeats(%s)_sample_error.pdf' % (
                           self.max_gate_error, step, repeats), bbox_inches='tight')
