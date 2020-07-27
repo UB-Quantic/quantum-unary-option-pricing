@@ -9,19 +9,20 @@ r = 0.05
 T = 0.1
 data = (S0, sig, r, T, K)
 
-bins_list = list(range(8, 17, 1))
+bins_list = [8, 16, 32, 64, 128]
 
-max_error_gate = 0.003
+max_error_gate = 0.005
 error_name = 'depolarizing'
 repeats = 10
 measure = True
 thermal = False
-steps = 2
+steps = 6
 # Create error objecterror=
 Err = errors(data, max_error_gate, steps)
 
 Err.paint_cl_payoff(100)
 for bins in bins_list:
+    print('Num bins =', bins)
     print('binary')
     # Compute payoff errors in binary
     Err.compute_save_errors_binary(bins, error_name, repeats, measure_error=measure, thermal_error=thermal)
@@ -64,7 +65,7 @@ for bins in bins_list:
     Err.paint_amplitude_estimation_binary(bins, error_name, repeats, M=4, measure_error=measure, thermal_error=thermal)
     # Err.paint_amplitude_estimation_unary(bins, error_name, repeats, M=4, measure_error=measure, thermal_error=thermal)
 
-#Err.paint_AE_binary_run_bins(bins_list, error_name, repeats, measure_error=measure)
+Err.paint_AE_binary_run_bins(bins_list, error_name, repeats, measure_error=measure)
 
 
 

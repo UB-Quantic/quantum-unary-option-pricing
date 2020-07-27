@@ -243,7 +243,7 @@ def rotations(qc, q, k, u=0, error=0.065):
 
     return c
 
-def rotations_inv(qc, q, k, u=0, error=0.065):
+def rotations_inv(qc, q, k, u=0, error=0.05):
     """
     Circuit for the inverse rotations of the payoff circuit
     :param qc: quantum circuit the rotations are added to
