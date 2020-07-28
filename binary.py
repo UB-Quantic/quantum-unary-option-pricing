@@ -304,6 +304,7 @@ def payoff_circuit_inv(qc, q, K, high, low, error=0.05, measure=True):
 
 
 def load_payoff_quantum_sim(qu, S0, sig, r, T, K, error=0.05):
+    print(error)
     """
     Function to create quantum circuit to return an approximate probability distribution.
         This function is thought to be the prelude of run_payoff_quantum_sim

@@ -150,7 +150,8 @@ class errors:
         except:
             pass
         np.savetxt(name_folder_data(self.data) + '/%s_bins/binary/'%bins + error_name + '_gate(%s)_steps(%s)_repeats(%s).npz'%(self.max_gate_error, self.steps, repeats), results)
-
+        print(results)
+        print(np.mean(results), np.var(results), self.cl_payoff)
 
     def compute_save_errors_unary(self, bins, error_name, repeats, measure_error=False, thermal_error=False, shots=10000):
         """
@@ -560,6 +561,69 @@ class errors:
             np.savetxt(name_folder_data(
                 self.data) + '/%s_bins/unary/amplitude_estimation/' % bins + error_name + '_gate(%s)_steps(%s)_repeats(%s)_M(%s)_confidence.npz' % (
                        self.max_gate_error, self.steps, repeats, m), confidence[j])
+
+
+    def error_emplitude_estimation_binary(self, bins, error_name, repeats, M=4, measure_error=False, thermal_error=False,
+                                   shots=500, alpha=0.05, u=0, error=0.05):
+        """
+        Function to paint outcomes and errors for amplitude estimation
+        :param bins:
+        :param error_name:
+        :param repeats:
+        :param M:
+        :param measure_error:
+        :param thermal_error:
+        :param shots:
+        :param alpha:
+        :return: None. Saves data in files.
+        """
+
+        (values, pdf) = un.get_pdf(bins, self.S0, self.sig, self.r, self.T)[0]
+        error_name = self.change_name(error_name, measure_error, thermal_error)
+        # plt.rc('text', usetex=True)
+        plt.rc('font', family='serif')
+        fig, ax = plt.subplots()
+        un_data = np.empty(M+1)
+        un_conf = np.empty(M + 1)
+        bin_data = np.empty(M + 1)
+        bin_conf = np.empty(M + 1)
+        for m in range(M+1):
+            bin_data_ = np.loadtxt(name_folder_data(
+                self.data) + '/%s_bins/binary/amplitude_estimation/' % bins + error_name + '_gate(%s)_steps(%s)_repeats(%s)_M(%s).npz' % (
+                                     self.max_gate_error, self.steps, repeats, m))[0]
+            bin_conf_ = np.loadtxt(name_folder_data(
+                self.data) + '/%s_bins/binary/amplitude_estimation/' % bins + error_name + '_gate(%s)_steps(%s)_repeats(%s)_M(%s)_confidence.npz' % (
+                                       self.max_gate_error, self.steps, repeats, m))[0]
+
+            bin_data[m], bin_conf[m] = errors_experiment(bin_data_, bin_conf_)
+
+        a_bin = errors_experiment(bin_data, bin_conf)[0]
+        (values, pdf) = bin.get_pdf(bins, self.S0, self.sig, self.r, self.T)[1]
+        high, low = np.max(values), np.min(values)
+        k = int(np.floor(bins * (self.K - low) / (high - low)))
+        c = (2 * error) ** (1 / (2 * u + 2))
+        payoff_bin = (high - low) / bins * (a_bin - .5 + c) * (bins - 1 - k) / (2 * c)
+        '''
+        a_bin must be calculated in this way because the error allowed in the payoff detracts the precision 
+        of Amplitude Estimation
+        '''
+        bin_data = (high - low) / bins * (bin_data - .5 + c) * (bins - 1 - k) / (2 * c)
+        bin_conf = (high - low) / bins * (bin_conf) * (bins - 1 - k) / (2 * c)
+        # ax.plot([0, M], [a_un, a_un], c='blue', ls='--')
+        ax.plot([0, M], [self.cl_payoff, self.cl_payoff], c='black', ls='--', label='Cl. payoff')
+
+        ax.scatter(np.arange(M + 1), bin_data, c='C1', marker='+', label='binary', zorder=10)
+        ax.fill_between(np.arange(M + 1), bin_data - bin_conf, bin_data + bin_conf, color='C1', alpha=0.3, zorder=10)
+        ax.plot([0, M], [payoff_bin, payoff_bin], c='orangered', ls='--')
+        ax.set(xlabel='AE iterations', ylabel='Payoff', xticks=np.arange(0, M + 1), xticklabels=np.arange(0, M + 1))
+        ax.legend()
+        ax.xaxis.set_minor_locator(AutoMinorLocator())
+        ax.yaxis.set_minor_locator(AutoMinorLocator())
+        ax.tick_params(direction="in", which='major', length=10)
+        ax.tick_params(direction="in", which='minor', length=5)
+        fig.savefig(name_folder_data(
+            self.data) + '/%s_bins/binary/' % bins + error_name + '_amplitude_estimation_perfect_circuit_results.pdf')
+
 
     def error_emplitude_estimation(self, bins, error_name, repeats, M=4, measure_error=False, thermal_error=False,
                                    shots=500, alpha=0.05, u=0, error=0.05):
