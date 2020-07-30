@@ -105,7 +105,7 @@ def get_pdf(qu, S0, sig, r, T):
     # S = np.linspace(low, high, samples)
 
     # construct circuit factory for uncertainty model
-    uncertainty_model = LogNormalDistribution(qu, mu=mu, sigma=sigma, low=low, high=high)
+    uncertainty_model = LogNormalDistribution(min(16, qu), mu=mu, sigma=sigma, low=low, high=high)
 
     values = uncertainty_model.values
     pdf = uncertainty_model.probabilities
@@ -235,7 +235,7 @@ def rotations(qc, q, k, u=0, error=0.05):
     :return: value c
     """
 
-    c = (2 * error) ** (1 / (2 * u + 2))
+    c = np.sqrt(2) * error ** (1 / (2 * u + 2))
     g0 = 0.25 * np.pi - c
     qc.ry(2 * g0, 2 * q + 1)
     qc.cu3(4 * c * k / (k - 2 ** q + 1), 0, 0, 2 * q, 2 * q + 1)
@@ -255,7 +255,7 @@ def rotations_inv(qc, q, k, u=0, error=0.05):
     :return: value c
     """
 
-    c = (2 * error) ** (1 / (2 * u + 2))
+    c = np.sqrt(2) * error ** (1 / (2 * u + 2))
     g0 = 0.25 * np.pi - c
     for _ in range(q-1, -1, -1):
         ccry_inv(qc, [_, 2 * q], 2 * q + 1, 2 ** (2 + _) * c / (2 ** q - 1 - k))
@@ -304,7 +304,6 @@ def payoff_circuit_inv(qc, q, K, high, low, error=0.05, measure=True):
 
 
 def load_payoff_quantum_sim(qu, S0, sig, r, T, K, error=0.05):
-    print(error)
     """
     Function to create quantum circuit to return an approximate probability distribution.
         This function is thought to be the prelude of run_payoff_quantum_sim

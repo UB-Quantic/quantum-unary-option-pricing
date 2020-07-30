@@ -8,7 +8,7 @@ parser.add_argument("--error_c", default=0.005, type=float)
 
 # 8 bins: 0.05
 # 16 bins: 0.0065
-
+# En adelante: 0.005
 args = vars(parser.parse_args())
 
 S0 = 2
@@ -20,19 +20,19 @@ data = (S0, sig, r, T, K)
 
 bins = args.get('bins')
 error_c = args.get('error_c')
-max_error_gate = 0.000
+max_error_gate = 0.005
 error_name = 'depolarizing'
 repeats = 10
 measure = True
 thermal = False
-steps = 1
+steps = 6
 # Create error object
 Err = errors(data, max_error_gate, steps)
 
 #Err.paint_cl_payoff(100)
 #print('binary')
 # Compute payoff errors in binary
-Err.compute_save_errors_binary(bins, error_name, repeats, measure_error=measure, thermal_error=thermal, error_c=error_c)
+# Err.compute_save_errors_binary(bins, error_name, repeats, measure_error=measure, thermal_error=thermal, error_c=error_c)
 #print('unary')
 # Compute payoff errors in unary
 #Err.compute_save_errors_unary(bins, error_name, repeats, measure_error=measure, thermal_error=thermal)
@@ -64,6 +64,7 @@ print('AE unary')
 # Err.compute_save_errors_unary_amplitude_estimation(bins, error_name, repeats, measure_error=measure, thermal_error=thermal)
 #print('AE binary')
 #Amplitude Estimation binary
+
 Err.compute_save_errors_binary_amplitude_estimation(bins, error_name, repeats, measure_error=measure, thermal_error=thermal, error_c=error_c)
 Err.error_emplitude_estimation_binary(bins, error_name, repeats, M=4, measure_error=measure, error=error_c)
 
@@ -71,8 +72,10 @@ print('paint AE')
 #Unary and Binary Amplitude Estimation, figures 15
 #Err.error_emplitude_estimation(bins, error_name, repeats, measure_error=measure, thermal_error=thermal)
 #Unary and Binary payoff errors, figures 16, 17
-#Err.paint_amplitude_estimation_binary(bins, error_name, repeats, M=4, measure_error=measure, thermal_error=thermal)
-# Err.paint_amplitude_estimation_binary(bins, error_name, repeats, M=4, measure_error=measure, thermal_error=thermal)
+#Err.paint_amplitude_estimation(bins, error_name, repeats, M=4, measure_error=measure, thermal_error=thermal)
+
+
+Err.paint_amplitude_estimation_binary(bins, error_name, repeats, M=4, measure_error=measure, thermal_error=thermal)
 
 
 

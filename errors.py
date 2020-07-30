@@ -34,7 +34,7 @@ class errors:
         self.steps = steps
         self.error_steps = np.linspace(0, max_gate_error, steps)
         self.list_errors = ['bitflip', 'phaseflip', 'bitphaseflip',
-                            'depolarizing', 'thermal', 'measurement']
+                            'depolarizing', 'thermal', 'measurement', 'none']
         try:
             """
             Create folder with results
@@ -71,6 +71,12 @@ class errors:
                 error_name += '_t'
         elif 'depolarizing' in error_name:
             noise = noise_model_depolarizing
+            if measure_error:
+                error_name += '_m'
+            if thermal_error:
+                error_name += '_t'
+        elif 'none' in error_name:
+            noise = noise_model_none
             if measure_error:
                 error_name += '_m'
             if thermal_error:
@@ -139,7 +145,8 @@ class errors:
 
         for i, error in enumerate(self.error_steps):
             noise_model = noise(error, measure=measure_error, thermal=thermal_error)
-            basis_gates = noise_model.basis_gates
+            try: basis_gates = noise_model.basis_gates
+            except: basis_gates=None
             c, k, high, low, qc = bin.load_payoff_quantum_sim(qubits, self.S0, self.sig, self.r, self.T, self.K, error=error_c)
             for r in range(repeats):
                 qu_payoff_sim = bin.run_payoff_quantum_sim(qubits, c, k, high, low, qc, shots, basis_gates, noise_model)
@@ -150,8 +157,6 @@ class errors:
         except:
             pass
         np.savetxt(name_folder_data(self.data) + '/%s_bins/binary/'%bins + error_name + '_gate(%s)_steps(%s)_repeats(%s).npz'%(self.max_gate_error, self.steps, repeats), results)
-        print(results)
-        print(np.mean(results), np.var(results), self.cl_payoff)
 
     def compute_save_errors_unary(self, bins, error_name, repeats, measure_error=False, thermal_error=False, shots=10000):
         """
@@ -481,7 +486,8 @@ class errors:
         for i, error in enumerate(self.error_steps):
             circuits = [[]]*len(m_s)
             noise_model = noise(error, measure=measure_error, thermal=thermal_error)
-            basis_gates = noise_model.basis_gates
+            try: basis_gates = noise_model.basis_gates
+            except: basis_gates = None
             for j, m in enumerate(m_s):
                 qc = bin.load_Q_operator(qubits, m, self.S0, self.sig, self.r, self.T, self.K, error=error_c)[0]
                 circuits[j] = qc
@@ -495,8 +501,9 @@ class errors:
                     zeroes_s[j] = int(zeroes)
                 theta_max_s, error_theta_s = get_theta(m_s, ones_s, zeroes_s)
                 a_s, error_s = np.sin(theta_max_s) ** 2, np.abs(np.sin(2 * theta_max_s) * error_theta_s)
+                print(a_s, error_s)
                 error_payoff[:, i, r] = a_s
-                confidence[:, i, r] =np.abs(error_s)
+                confidence[:, i, r] =error_s
 
         try:
             os.makedirs(name_folder_data(self.data) + '/%s_bins/binary/amplitude_estimation' % bins)
@@ -598,7 +605,7 @@ class errors:
             bin_data[m], bin_conf[m] = errors_experiment(bin_data_, bin_conf_)
 
         a_bin = errors_experiment(bin_data, bin_conf)[0]
-        (values, pdf) = bin.get_pdf(bins, self.S0, self.sig, self.r, self.T)[1]
+        (values, pdf) = bin.get_pdf(min(bins, 16), self.S0, self.sig, self.r, self.T)[1]
         high, low = np.max(values), np.min(values)
         k = int(np.floor(bins * (self.K - low) / (high - low)))
         c = (2 * error) ** (1 / (2 * u + 2))
@@ -909,7 +916,7 @@ class errors:
         z = erfinv(1 - alpha / 2)
         error_name = self.change_name(error_name, measure_error, thermal_error)
         m_s = np.arange(0, M + 1, 1)
-        plt.rc('text', usetex=True)
+        # plt.rc('text', usetex=True)
         plt.rc('font', family='serif')
         fig_0, ax_0 = plt.subplots()
         fig_1, ax_1 = plt.subplots()
@@ -991,7 +998,7 @@ class errors:
         z = erfinv(1 - alpha / 2)
         error_name = self.change_name(error_name, measure_error, thermal_error)
         m_s = np.arange(0, M + 1, 1)
-        plt.rc('text', usetex=True)
+        # plt.rc('text', usetex=True)
         plt.rc('font', family='serif')
         fig_0, ax_0 = plt.subplots()
         fig_1, ax_1 = plt.subplots()
