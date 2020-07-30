@@ -105,7 +105,7 @@ def get_pdf(qu, S0, sig, r, T):
     # S = np.linspace(low, high, samples)
 
     # construct circuit factory for uncertainty model
-    uncertainty_model = LogNormalDistribution(qu, mu=mu, sigma=sigma, low=low, high=high)
+    uncertainty_model = LogNormalDistribution(min(16, qu), mu=mu, sigma=sigma, low=low, high=high)
 
     values = uncertainty_model.values
     pdf = uncertainty_model.probabilities
@@ -223,7 +223,8 @@ def comparator_inv(qc, q, K, high, low):
     return k
 
 
-def rotations(qc, q, k, u=0, error=0.065):
+def rotations(qc, q, k, u=0, error=0.05):
+
     """
     Circuit for the rotations of the payoff circuit
     :param qc: quantum circuit the rotations are added to
@@ -234,7 +235,7 @@ def rotations(qc, q, k, u=0, error=0.065):
     :return: value c
     """
 
-    c = (2 * error) ** (1 / (2 * u + 2))
+    c = np.sqrt(2) * error ** (1 / (2 * u + 2))
     g0 = 0.25 * np.pi - c
     qc.ry(2 * g0, 2 * q + 1)
     qc.cu3(4 * c * k / (k - 2 ** q + 1), 0, 0, 2 * q, 2 * q + 1)
@@ -254,7 +255,7 @@ def rotations_inv(qc, q, k, u=0, error=0.05):
     :return: value c
     """
 
-    c = (2 * error) ** (1 / (2 * u + 2))
+    c = np.sqrt(2) * error ** (1 / (2 * u + 2))
     g0 = 0.25 * np.pi - c
     for _ in range(q-1, -1, -1):
         ccry_inv(qc, [_, 2 * q], 2 * q + 1, 2 ** (2 + _) * c / (2 ** q - 1 - k))
@@ -263,7 +264,7 @@ def rotations_inv(qc, q, k, u=0, error=0.05):
     return c
 
 
-def payoff_circuit(qc, q, K, high, low, measure=True):
+def payoff_circuit(qc, q, K, high, low, error=0.05, measure=True):
     """
     Setting all pieces for the payoff (comparator + rotations) together
     :param qc: quantum circuit
@@ -275,14 +276,14 @@ def payoff_circuit(qc, q, K, high, low, measure=True):
     """
 
     k = comparator(qc, q, K, high, low)
-    c = rotations(qc, q, k)
+    c = rotations(qc, q, k, error=error)
 
     if measure:
         qc.measure([2 * q + 1], [0])
 
     return k, c
 
-def payoff_circuit_inv(qc, q, K, high, low, measure=True):
+def payoff_circuit_inv(qc, q, K, high, low, error=0.05, measure=True):
     """
     Setting all pieces for the payoff (comparator + rotations) together and inverse
     :param qc: quantum circuit
@@ -293,7 +294,7 @@ def payoff_circuit_inv(qc, q, K, high, low, measure=True):
     :return: k, c; updates qc
     """
     k = int(np.floor(2 ** q * (K - low) / (high - low)))
-    c = rotations_inv(qc, q, k)
+    c = rotations_inv(qc, q, k, error=error)
     k = comparator_inv(qc, q, K, high, low)
 
     if measure:
@@ -302,7 +303,7 @@ def payoff_circuit_inv(qc, q, K, high, low, measure=True):
     return k, c
 
 
-def load_payoff_quantum_sim(qu, S0, sig, r, T, K):
+def load_payoff_quantum_sim(qu, S0, sig, r, T, K, error=0.05):
     """
     Function to create quantum circuit to return an approximate probability distribution.
         This function is thought to be the prelude of run_payoff_quantum_sim
@@ -337,7 +338,7 @@ def load_payoff_quantum_sim(qu, S0, sig, r, T, K):
     qc = QuantumCircuit(qr, cr)
     uncertainty_model.build(qc, qr)
 
-    k, c = payoff_circuit(qc, qu, K, high, low)
+    k, c = payoff_circuit(qc, qu, K, high, low, error=error)
 
 
     return c, k, high, low, qc
@@ -407,7 +408,7 @@ def oracle_operator(C, qubits):
 
     return C
 
-def load_Q_operator(qu, depth, S0, sig, r, T, K):
+def load_Q_operator(qu, depth, S0, sig, r, T, K, error=0.05):
     """
     Function to create quantum circuit for the unary representation to return an approximate probability distribution.
         This function is thought to be the prelude of run_payoff_quantum_sim
@@ -420,7 +421,7 @@ def load_Q_operator(qu, depth, S0, sig, r, T, K):
     :param K: strike
     :return: quantum circuit, backend, prices
     """
-    depeth = int(depth)
+    depth = int(depth)
 
     mu = ((r - 0.5 * sig ** 2) * T + np.log(S0))  # parameters for the log_normal distribution
     sigma = sig * np.sqrt(T)
@@ -441,15 +442,15 @@ def load_Q_operator(qu, depth, S0, sig, r, T, K):
     qc = QuantumCircuit(qr, cr)
 
     uncertainty_model.build(qc, qr)
-    (k, c) = payoff_circuit(qc, qu, K, high, low, measure=False)
+    (k, c) = payoff_circuit(qc, qu, K, high, low, error=error, measure=False)
 
     for i in range(depth):
         oracle_operator(qc, qu)
-        payoff_circuit_inv(qc, qu, K, high, low, measure=False)
+        payoff_circuit_inv(qc, qu, K, high, low, error=error, measure=False)
         uncertainty_model.build_inverse(qc, qr)
         diffusion_operator(qc, qu)
         uncertainty_model.build(qc, qr)
-        payoff_circuit(qc, qu, K, high, low, measure=False)
+        payoff_circuit(qc, qu, K, high, low, error=error, measure=False)
 
     qc.measure([2 * qu + 1], [0])
     return qc, (k, c, high, low)

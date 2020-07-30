@@ -144,6 +144,17 @@ def noise_model_depolarizing(error, measure=True, thermal=True):
 
     return noise_model
 
+def noise_model_none(error, measure=True, thermal=True):
+    """
+    Creates error for depolarizing channel
+    :param error: Probability of depolarizing channel
+    :param measure: True or False, whether we include readout errors with probability 10 * error
+    :param thermal: True or False, whether we include thermal relaxation, see noise_model_thermal
+    :return: noise model for the error
+    """
+
+    return None
+
 def noise_model_thermal(error, measure=False, thermal=False):
     """
     Creates error for thermal relaxation for T1, T2 = 1.5, 1.2
