@@ -20,13 +20,15 @@ data = (S0, sig, r, T, K)
 
 bins = args.get('bins')
 error_c = args.get('error_c')
+# bins_list = [8, 16, 32, 64, 128] # Ready for painting distinct bins
+
 max_error_gate = 0.005
 error_name = 'depolarizing'
 repeats = 10
 measure = True
 thermal = False
 steps = 6
-# Create error object
+# Create error objecterror=
 Err = errors(data, max_error_gate, steps)
 
 #Err.paint_cl_payoff(100)
@@ -76,6 +78,7 @@ print('paint AE')
 
 
 Err.paint_amplitude_estimation_binary(bins, error_name, repeats, M=4, measure_error=measure, thermal_error=thermal)
+
 
 
 

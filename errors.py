@@ -917,6 +917,7 @@ class errors:
         error_name = self.change_name(error_name, measure_error, thermal_error)
         m_s = np.arange(0, M + 1, 1)
         # plt.rc('text', usetex=True)
+
         plt.rc('font', family='serif')
         fig_0, ax_0 = plt.subplots()
         fig_1, ax_1 = plt.subplots()
@@ -999,6 +1000,7 @@ class errors:
         error_name = self.change_name(error_name, measure_error, thermal_error)
         m_s = np.arange(0, M + 1, 1)
         # plt.rc('text', usetex=True)
+
         plt.rc('font', family='serif')
         fig_0, ax_0 = plt.subplots()
         fig_1, ax_1 = plt.subplots()

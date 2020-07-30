@@ -223,8 +223,8 @@ def comparator_inv(qc, q, K, high, low):
     return k
 
 
-
 def rotations(qc, q, k, u=0, error=0.05):
+
     """
     Circuit for the rotations of the payoff circuit
     :param qc: quantum circuit the rotations are added to
