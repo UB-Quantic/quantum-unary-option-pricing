@@ -224,16 +224,16 @@ class errors:
         ax.fill_between(100 * self.error_steps, maxs_unary, mins_unary, alpha=0.2, facecolor='C0')
         ax.fill_between(100 * self.error_steps, maxs_binary, mins_binary, alpha=0.2, facecolor='C1')
         ax.set(ylim=[0, 50])
-        plt.ylabel('percentage off classical value (\%)')
-        plt.xlabel('single-qubit gate error (\%)')
-        ax.legend()
+        plt.ylabel('percentage off classical value (%)', fontsize=15)
+        plt.xlabel('single-qubit gate error (%)', fontsize=15)
+        ax.legend(fontsize=15, markerscale=2)
         fig.tight_layout()
         ax.xaxis.set_minor_locator(AutoMinorLocator())
         ax.yaxis.set_minor_locator(AutoMinorLocator())
         ax.tick_params(direction="in", which='major', length=10)
         ax.tick_params(direction="in", which='minor', length=5)
         fig.savefig(name_folder_data(self.data) + '/%s_bins/' % bins
-                                  + error_name + '_gate(%s)_steps(%s)_repeats(%s).pdf' % (
+                                  + error_name + '_gate%s_steps%s_repeats%s.pdf' % (
                                   self.max_gate_error, self.steps, repeats), bbox_inches='tight')
 
 
@@ -345,14 +345,14 @@ class errors:
         ax.scatter(values, pdf, s=1250, color='black', marker='_', zorder=9)
         plt.ylabel('Probability')
         plt.xlabel('Option price')
-        ax.legend()
+        ax.legend(fontsize=15, markerscale=2)
         fig.tight_layout()
         ax.xaxis.set_minor_locator(AutoMinorLocator())
         ax.yaxis.set_minor_locator(AutoMinorLocator())
         ax.tick_params(direction="in", which='major', length=10)
         ax.tick_params(direction="in", which='minor', length=5)
         fig.savefig(name_folder_data(self.data) + '/%s_bins/' % bins
-                    + error_name + '_gate(%s)_repeats(%s)_probs.pdf' % (
+                    + error_name + '_gate%s_repeats%s_probs.pdf' % (
                         error_value, repeats), bbox_inches='tight')
 
     def compute_save_KL_binary(self, bins, error_name, repeats, measure_error=False, thermal_error=False, shots=10000):
@@ -450,16 +450,16 @@ class errors:
         ax.scatter(100 * self.error_steps, means_binary, s=20, color='C1', label='binary', marker='+')
         ax.fill_between(100 * self.error_steps, maxs_unary, mins_unary, alpha=0.2, facecolor='C0')
         ax.fill_between(100 * self.error_steps, maxs_binary, mins_binary, alpha=0.2, facecolor='C1')
-        plt.ylabel('KL Divergence')
-        plt.xlabel('single-qubit gate error (\%)')
+        plt.ylabel('KL Divergence', fontsize=15)
+        plt.xlabel('single-qubit gate error (%)', fontsize=15)
         plt.yscale('log')
-        ax.legend()
+        ax.legend(fontsize=15, markerscale=2)
         fig.tight_layout()
         ax.xaxis.set_minor_locator(AutoMinorLocator())
         ax.tick_params(direction="in", which='major', length=10)
         ax.tick_params(direction="in", which='minor', length=5)
         fig.savefig(name_folder_data(self.data) + '/%s_bins/' % bins
-                                  + error_name + '_gate(%s)_steps(%s)_repeats(%s)_div.pdf' % (
+                                  + error_name + '_gate%s_steps%s_repeats%s_div.pdf' % (
                                   self.max_gate_error, self.steps, repeats), bbox_inches='tight')
 
     def compute_save_errors_binary_amplitude_estimation(self, bins, error_name, repeats, M=4, measure_error=False
@@ -501,7 +501,6 @@ class errors:
                     zeroes_s[j] = int(zeroes)
                 theta_max_s, error_theta_s = get_theta(m_s, ones_s, zeroes_s)
                 a_s, error_s = np.sin(theta_max_s) ** 2, np.abs(np.sin(2 * theta_max_s) * error_theta_s)
-                print(a_s, error_s)
                 error_payoff[:, i, r] = a_s
                 confidence[:, i, r] =error_s
 
@@ -697,8 +696,10 @@ class errors:
         ax.scatter(np.arange(M + 1), bin_data, c='C1', marker='+', label='binary', zorder=10)
         ax.fill_between(np.arange(M + 1), bin_data - bin_conf, bin_data + bin_conf, color='C1', alpha=0.3, zorder=10)
         ax.plot([0, M], [payoff_bin, payoff_bin], c='orangered', ls='--')
-        ax.set(xlabel='AE iterations', ylabel='Payoff', xticks=np.arange(0, M + 1), xticklabels=np.arange(0, M + 1))
-        ax.legend()
+        ax.set(xticks=np.arange(0, M + 1), xticklabels=np.arange(0, M + 1))
+        ax.set_xlabel('AE iterations', fontsize=15)
+        ax.set_ylabel('Payoff', fontsize=15)
+        ax.legend(fontsize=15, markerscale=2)
         ax.xaxis.set_minor_locator(AutoMinorLocator())
         ax.yaxis.set_minor_locator(AutoMinorLocator())
         ax.tick_params(direction="in", which='major', length=10)
@@ -726,14 +727,15 @@ class errors:
         bx.plot(np.arange(M + 1) - 0.1, bound_up, ls=':', c='C1')
         bx.plot(np.arange(M + 1) - 0.1, bound_down, ls='-.', c='C1')
 
-        bx.set(xlabel='AE iterations', xticks=np.arange(0, M+1), xticklabels=np.arange(0, M+1),
-               ylabel=r'$\Delta {\rm Payoff} $', ylim=[0.0005,0.05])
+        bx.set(xticks=np.arange(0, M+1), xticklabels=np.arange(0, M+1), ylim=[0.0005,0.05])
+        bx.set_xlabel('AE iterations', fontsize=15)
+        bx.set_ylabel(r'$\Delta {\rm Payoff} $', fontsize=15)
         plt.yscale('log')
         custom_lines = [Line2D([0], [0], color='C0', marker='x', lw=0, markersize=10),
                         Line2D([0], [0], color='C1', marker='+', lw=0, markersize=10),
                         Line2D([0], [0], color='black', lw=1, ls=':'),
                         Line2D([0], [0], color='black', lw=1, ls='-.')]
-        bx.legend(custom_lines, ['Unary', 'Binary', 'Cl. sampling', 'Optimal AE'])
+        bx.legend(custom_lines, ['Unary', 'Binary', 'Cl. sampling', 'Optimal AE'], fontsize=15)
         fig.tight_layout()
         bx.xaxis.set_minor_locator(AutoMinorLocator())
         bx.tick_params(direction="in", which='major', length=10)
@@ -756,6 +758,8 @@ class errors:
         :param alpha:
         :return: None. Saves data in files.
         """
+        marker = ['o', 'P', 'X', '^', 'v']
+        hatch = ['o', '+', 'x', '/', '\\']
         z = erfinv(1 - alpha / 2)
         (values, pdf) = un.get_pdf(bins, self.S0, self.sig, self.r, self.T)[0]
         payoff_un = np.sum(pdf[values >= self.K] * (values[values >= self.K] - self.K))
@@ -783,22 +787,26 @@ class errors:
                                                      payoff_confidences[_] / payoff_un)
                 data_a[_], conf_a[_] = experimental_data(payoff[_] / payoff_un, payoff_confidences[_]/payoff_un)
 
-            ax_0.scatter(100*self.error_steps, 100*(data[:,0]), color='C%s' % (j), label=r'M=%s' % m, marker='x')
-            ax_0.fill_between(100*self.error_steps, 100*(data[:,0] - data[:, 1]), 100*(data[:,0] + data[:, 1]), color='C%s' % (j), alpha=0.3)
+            ax_0.scatter(100*self.error_steps, 100*(data[:,0]), color='C%s' % (j), label=r'M=%s' % m, marker=marker[j])
+            ax_0.fill_between(100*self.error_steps, 100*(data[:,0] - data[:, 1]), 100*(data[:,0] + data[:, 1]), color='C%s' % (j), alpha=0.3, hatch=hatch[j])
 
             custom_lines.append(Line2D([0], [0], color='C%s' % (j), lw=0, marker='x'))
 
-            ax_1.scatter(100*self.error_steps, 100*conf_a[:, 0], color='C%s' % (j), marker='+', zorder=0, s=30, label=r'M=%s' % m)
+            ax_1.scatter(100*self.error_steps, 100*conf_a[:, 0], color='C%s' % (j), marker=marker[j], zorder=0, s=30, label=r'M=%s' % m)
             a_max = (np.max(values) - self.K) / payoff_un
             bound_down = np.sqrt(data_a[:, 0]) * np.sqrt(a_max - data_a[:, 0]) * z / np.sqrt(shots) / np.sum(
                 1 + 2 * (np.arange(m + 1)))
             bound_up = np.sqrt(data_a[:, 0]) * np.sqrt(a_max - data_a[:, 0]) * z / np.sqrt(shots) / np.sqrt(np.sum(
                 1 + 2 * (np.arange(m + 1))))
-            ax_1.plot(100 * self.error_steps, 100*bound_down, ls='-.', color='C%s' % (j), zorder=2)
-            ax_1.plot(100 * self.error_steps, 100*bound_up, ls=':', color='C%s' % (j), zorder=2)
+            ax_1.plot(100 * self.error_steps, 100*bound_down, ls='-.', color='C%s' % (j), zorder=2, marker=marker[j], ms=3)
+            ax_1.plot(100 * self.error_steps, 100*bound_up, ls=':', color='C%s' % (j), zorder=2, marker=marker[j], ms=3)
 
-        ax_0.set(xlabel='single-qubit gate error (\%)', ylabel='percentage off optimal payoff (\%)', ylim=[0, 175])
-        ax_1.set(xlabel='single-qubit gate error (\%)', ylabel='$\Delta$ payoff (\%)', ylim=[0.05, 50], yscale='log')
+        ax_0.set(ylim=[0, 175])
+        ax_1.set(ylim=[0.05, 50], yscale='log')
+        ax_0.set_xlabel('single-qubit gate error (%)',fontsize=15)
+        ax_0.set_ylabel('percentage off optimal payoff (%)',fontsize=15)
+        ax_1.set_xlabel('single-qubit gate error (%)',fontsize=15)
+        ax_1.set_ylabel('$\Delta$ payoff (%)', fontsize=15)
         ax_0.legend(loc='upper left')
         custom_lines.append(Line2D([0], [0], color='black', lw=1, ls=':'))
         custom_lines.append(Line2D([0], [0], color='black', lw=1, ls='-.'))
@@ -813,10 +821,10 @@ class errors:
         ax_1.tick_params(direction="in", which='major', length=10)
         ax_1.tick_params(direction="in", which='minor', length=5)
         fig_0.savefig(name_folder_data(
-                self.data) + '/%s_bins/unary/amplitude_estimation/' % bins + error_name + '_gate(%s)_steps(%s)_repeats(%s)_data.pdf' % (
+                self.data) + '/%s_bins/unary/amplitude_estimation/' % bins + error_name + '_gate%s_steps%s_repeats%s_data.pdf' % (
                             self.max_gate_error, self.steps, repeats), bbox_inches='tight')
         fig_1.savefig(name_folder_data(
-            self.data) + '/%s_bins/unary/amplitude_estimation/' % bins + error_name + '_gate(%s)_steps(%s)_repeats(%s)_sample_error.pdf' % (
+            self.data) + '/%s_bins/unary/amplitude_estimation/' % bins + error_name + '_gate%s_steps%s_repeats%s_sample_error.pdf' % (
                           self.max_gate_error, self.steps, repeats), bbox_inches='tight')
 
 
@@ -834,7 +842,8 @@ class errors:
         :param alpha:
         :return: None. Saves data in files.
         """
-
+        marker = ['o', 'P', 'X', '^', 'v']
+        hatch = ['o', '+', 'x', '/', '\\']
         z = erfinv(1 - alpha / 2)
         error_name = self.change_name(error_name, measure_error, thermal_error)
         m_s = np.arange(0, M + 1, 1)
@@ -871,13 +880,13 @@ class errors:
                 data_a[_], conf_a[_] = experimental_data(payoff[_]/payoff_bin, payoff_confidences[_]/payoff_bin)
 
             ax_0.scatter(100 * self.error_steps, 100 * (data[:, 0]), color='C%s' % (j), label=r'M=%s' % m,
-                         marker='+')
+                         marker=marker[j])
             ax_0.fill_between(100 * self.error_steps, 100 * (data[:, 0] - data[:, 1]),
-                              100 * (data[:, 0] + data[:, 1]), color='C%s' % (j), alpha=0.3)
+                              100 * (data[:, 0] + data[:, 1]), color='C%s' % (j), alpha=0.3, hatch=hatch[j])
 
-            custom_lines.append(Line2D([0], [0], color='C%s' % (j), lw=0, marker='+'))
+            custom_lines.append(Line2D([0], [0], color='C%s' % (j), lw=0, marker=marker[j]))
 
-            ax_1.scatter(100 * self.error_steps, 100 * conf_a[:, 0], color='C%s' % (j), marker='+', zorder=0, s=30,
+            ax_1.scatter(100 * self.error_steps, 100 * conf_a[:, 0], color='C%s' % (j), marker=marker[j], zorder=0, s=30,
                          label=r'M=%s' % m)
 
             a_max = (high - low) / bins * (bins - 1 - k) / (2 * c) / payoff_bin
@@ -885,12 +894,15 @@ class errors:
                 1 + 2 * (np.arange(m + 1)))
             bound_up = np.sqrt(data_a[:, 0]) * np.sqrt(a_max - data_a[:, 0]) * z / np.sqrt(shots) / np.sqrt(np.sum(
                 1 + 2 * (np.arange(m + 1))))
-            ax_1.plot(100 * self.error_steps, 100 * bound_down, ls='-.', color='C%s' % (j), zorder=2)
-            ax_1.plot(100 * self.error_steps, 100 * bound_up, ls=':', color='C%s' % (j), zorder=2)
+            ax_1.plot(100 * self.error_steps, 100 * bound_down, ls='-.', color='C%s' % (j), zorder=2, marker=marker[j], ms=3)
+            ax_1.plot(100 * self.error_steps, 100 * bound_up, ls=':', color='C%s' % (j), zorder=2, marker=marker[j], ms=3)
 
-        ax_0.set(xlabel='single-qubit gate error (\%)', ylabel='percentage off optimal payoff (\%)', ylim=[0, 175])
-        ax_1.set(xlabel='single-qubit gate error (\%)', ylabel='$\Delta$ payoff (\%)', ylim=[0.05, 50],
-                 yscale='log')
+        ax_0.set(ylim=[0, 175])
+        ax_1.set(ylim=[0.05, 50], yscale='log')
+        ax_0.set_xlabel('single-qubit gate error (%)', fontsize=15)
+        ax_0.set_ylabel('percentage off optimal payoff (%)', fontsize=15)
+        ax_1.set_xlabel('single-qubit gate error (%)', fontsize=15)
+        ax_1.set_ylabel('$\Delta$ payoff (%)', fontsize=15)
         ax_0.legend(loc='upper left')
         custom_lines.append(Line2D([0], [0], color='black', lw=1, ls=':'))
         custom_lines.append(Line2D([0], [0], color='black', lw=1, ls='-.'))
@@ -905,14 +917,16 @@ class errors:
         ax_1.tick_params(direction="in", which='major', length=10)
         ax_1.tick_params(direction="in", which='minor', length=5)
         fig_0.savefig(name_folder_data(
-                self.data) + '/%s_bins/binary/amplitude_estimation/' % bins + error_name + '_gate(%s)_steps(%s)_repeats(%s)_data.pdf' % (
+                self.data) + '/%s_bins/binary/amplitude_estimation/' % bins + error_name + '_gate%s_steps%s_repeats%s_data.pdf' % (
                             self.max_gate_error, self.steps, repeats), bbox_inches='tight')
         fig_1.savefig(name_folder_data(
-            self.data) + '/%s_bins/binary/amplitude_estimation/' % bins + error_name + '_gate(%s)_steps(%s)_repeats(%s)_sample_error.pdf' % (
+            self.data) + '/%s_bins/binary/amplitude_estimation/' % bins + error_name + '_gate%s_steps%s_repeats%s_sample_error.pdf' % (
                           self.max_gate_error, self.steps, repeats), bbox_inches='tight')
 
     def paint_AE_unary_run_bins(self, bins_list, error_name, repeats, M=4, step=3,
                                 measure_error=False, thermal_error=False, shots=500, alpha=0.05):
+        marker = ['o', 'P', 'X', '^', 'v']
+        hatch = ['o', '+', 'x', '/', '\\']
         z = erfinv(1 - alpha / 2)
         error_name = self.change_name(error_name, measure_error, thermal_error)
         m_s = np.arange(0, M + 1, 1)
@@ -955,25 +969,28 @@ class errors:
                 i += 1
 
             ax_0.scatter(bins_list, 100 * (data[:, 0]), color='C%s' % (j), label=r'M=%s' % m,
-                         marker='x')
+                         marker=marker[j])
             ax_0.fill_between(bins_list, 100 * (data[:, 0] - data[:, 1]),
-                              100 * (data[:, 0] + data[:, 1]), color='C%s' % (j), alpha=0.3)
+                              100 * (data[:, 0] + data[:, 1]), color='C%s' % (j), alpha=0.3, hatch=hatch[j])
 
-            custom_lines.append(Line2D([0], [0], color='C%s' % (j), lw=0, marker='x'))
+            custom_lines.append(Line2D([0], [0], color='C%s' % (j), lw=0, marker=marker[j]))
 
-            ax_1.scatter(bins_list, 100 * conf_a[:, 0], color='C%s' % (j), marker='+', zorder=0, s=30,
+            ax_1.scatter(bins_list, 100 * conf_a[:, 0], color='C%s' % (j), marker=marker[j], zorder=0, s=30,
                          label=r'M=%s' % m)
             a_max = (np.max(values) - self.K) / payoff_un
             bound_down = np.sqrt(data_a[:, 0]) * np.sqrt(a_max - data_a[:, 0]) * z / np.sqrt(shots) / np.sum(
                 1 + 2 * (np.arange(m + 1)))
             bound_up = np.sqrt(data_a[:, 0]) * np.sqrt(a_max - data_a[:, 0]) * z / np.sqrt(shots) / np.sqrt(np.sum(
                 1 + 2 * (np.arange(m + 1))))
-            ax_1.plot(bins_list, 100 * bound_down, ls='-.', color='C%s' % (j), zorder=2)
-            ax_1.plot(bins_list, 100 * bound_up, ls=':', color='C%s' % (j), zorder=2)
+            ax_1.plot(bins_list, 100 * bound_down, ls='-.', color='C%s' % (j), zorder=2, marker=marker[j], ms=3)
+            ax_1.plot(bins_list, 100 * bound_up, ls=':', color='C%s' % (j), zorder=2, marker=marker[j], ms=3)
 
-        ax_0.set(xlabel='Bins', ylabel='percentage off optimal payoff (\%)', ylim=[0, 100])
-        ax_1.set(xlabel='Bins', ylabel='$\Delta$ payoff (\%)', ylim=[0.05, 50],
-                 yscale='log')
+        ax_0.set(ylim=[0, 100])
+        ax_0.set_xlabel('Bins', fontsize=15)
+        ax_0.set_ylabel('percentage off optimal payoff (%)', fontsize=15)
+        ax_1.set(ylim=[0.05, 50], yscale='log')
+        ax_1.set_xlabel('Bins', fontsize=15)
+        ax_1.set_ylabel('$\Delta$ payoff (%)', fontsize=15)
         ax_0.legend(loc='upper left')
         custom_lines.append(Line2D([0], [0], color='black', lw=1, ls=':'))
         custom_lines.append(Line2D([0], [0], color='black', lw=1, ls='-.'))
@@ -988,10 +1005,10 @@ class errors:
         ax_1.tick_params(direction="in", which='major', length=10)
         ax_1.tick_params(direction="in", which='minor', length=5)
         fig_0.savefig(name_folder_data(
-            self.data) + '/' + error_name + 'unary_gate(%s)_step(%s)_repeats(%s)_data.pdf' % (
+            self.data) + '/' + error_name + '_unary_gate%s_step%s_repeats%s_data.pdf' % (
                           self.max_gate_error, step, repeats), bbox_inches='tight')
         fig_1.savefig(name_folder_data(
-            self.data) + '/' + error_name + 'unary_gate(%s)_step(%s)_repeats(%s)_sample_error.pdf' % (
+            self.data) + '/' + error_name + '_unary_gate%s_step%s_repeats%s_sample_error.pdf' % (
                           self.max_gate_error, step, repeats), bbox_inches='tight')
 
     def paint_AE_binary_run_bins(self, bins_list, error_name, repeats, M=4, step=3,
@@ -1054,9 +1071,12 @@ class errors:
             ax_1.plot(bins_list, 100 * bound_down, ls='-.', color='C%s' % (j), zorder=2)
             ax_1.plot(bins_list, 100 * bound_up, ls=':', color='C%s' % (j), zorder=2)
 
-        ax_0.set(xlabel='Bins', ylabel='percentage off optimal payoff (\%)', ylim=[0, 100])
-        ax_1.set(xlabel='Bins', ylabel='$\Delta$ payoff (\%)', ylim=[0.05, 50],
-                 yscale='log')
+        ax_0.set(ylim=[0, 100])
+        ax_0.set_xlabel('Bins', fontsize=15)
+        ax_0.set_ylabel('percentage off optimal payoff (%)', fontsize=15)
+        ax_1.set(ylim=[0.05, 50], yscale='log')
+        ax_1.set_xlabel('Bins', fontsize=15)
+        ax_1.set_ylabel('$\Delta$ payoff (%)', fontsize=15)
         ax_0.legend(loc='upper left')
         custom_lines.append(Line2D([0], [0], color='black', lw=1, ls=':'))
         custom_lines.append(Line2D([0], [0], color='black', lw=1, ls='-.'))
@@ -1071,7 +1091,7 @@ class errors:
         ax_1.tick_params(direction="in", which='major', length=10)
         ax_1.tick_params(direction="in", which='minor', length=5)
         fig_0.savefig(name_folder_data(
-            self.data) + '/' + error_name + 'binary_gate(%s)_step(%s)_repeats(%s)_data.pdf' % (
+            self.data) + '/' + error_name + 'binary_gate%s_step%s_repeats%s_data.pdf' % (
                           self.max_gate_error, step, repeats), bbox_inches='tight')
         fig_1.savefig(name_folder_data(
             self.data) + '/' + error_name + 'binary_gate(%s)_step(%s)_repeats(%s)_sample_error.pdf' % (
