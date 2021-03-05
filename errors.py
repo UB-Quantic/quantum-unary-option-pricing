@@ -790,7 +790,7 @@ class errors:
             ax_0.scatter(100*self.error_steps, 100*(data[:,0]), color='C%s' % (j), label=r'M=%s' % m, marker=marker[j])
             ax_0.fill_between(100*self.error_steps, 100*(data[:,0] - data[:, 1]), 100*(data[:,0] + data[:, 1]), color='C%s' % (j), alpha=0.3, hatch=hatch[j])
 
-            custom_lines.append(Line2D([0], [0], color='C%s' % (j), lw=0, marker='x'))
+            custom_lines.append(Line2D([0], [0], color='C%s' % (j), lw=0, marker=marker[j]))
 
             ax_1.scatter(100*self.error_steps, 100*conf_a[:, 0], color='C%s' % (j), marker=marker[j], zorder=0, s=30, label=r'M=%s' % m)
             a_max = (np.max(values) - self.K) / payoff_un
