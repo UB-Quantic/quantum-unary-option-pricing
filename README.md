@@ -17,7 +17,7 @@ All code is written Python. Libraries required:
   - [aux_functions.py](https://github.com/UB-Quantic/quantum-unary-option-pricing/blob/master/aux_functions.py): File with some auxiliary functions that simplify the code
   - [binary.py](https://github.com/UB-Quantic/quantum-unary-option-pricing/blob/master/binary.py): File with all pieces required for performing calculations in the binary representation
   - [errors.py](https://github.com/UB-Quantic/quantum-unary-option-pricing/blob/master/errors.py): Class with all different calculations implemented
-  - [unary.py](https://github.com/UB-Quantic/quantum-unary-option-pricing/blob/master/unary.py): File with all pieces required for performing calculations in the binary representation
+  - [unary.py](https://github.com/UB-Quantic/quantum-unary-option-pricing/blob/master/unary.py): File with all pieces required for performing calculations in the unary representation
   - [main.py](https://github.com/UB-Quantic/quantum-unary-option-pricing/blob/master/main.py): This is the only file one needs to change. Everything can be set up there: number of bins, binary and unary, parameters defining the model, what functions are to be run... The only thing one has to do is to run this file. Comments on what the lines do are written in the source
   - [noise_mapping.py](https://github.com/UB-Quantic/quantum-unary-option-pricing/blob/master/noise_mapping.py): Generates noise maps for `qiskit`
   - [results.tar.gz.py](https://github.com/UB-Quantic/quantum-unary-option-pricing/blob/master/results.tar.gz): Tar file with results as computed in the paper. Not needed, but may save some time
